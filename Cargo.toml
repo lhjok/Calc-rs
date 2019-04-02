@@ -1,0 +1,8 @@
+[package]
+name = "Calc-rs"
+version = "1.0.0"
+authors = ["lhjok <lhjok@live.cn>"]
+edition = "2018"
+
+[dependencies]
+ansi_term = "0.11"
