@@ -1,9 +1,11 @@
+use rug::Float;
+use rug::ops::Pow;
 use std::process::exit;
 use std::cell::RefCell;
 use ansi_term::Colour::RGB;
 
 struct Calculator {
-    numbers: RefCell<Vec<f64>>,
+    numbers: RefCell<Vec<Float>>,
     operator: RefCell<Vec<u8>>,
     expression: String,
 }
@@ -17,7 +19,7 @@ impl Calculator {
         }
     }
 
-    pub fn run(&self) -> Result<f64, String> {
+    pub fn run(&self) -> Result<Float, String> {
 
         let mut sign: u8 = 0;   //入栈签名
         let mut vernier: u8 = 0;   //移动游标
@@ -25,9 +27,9 @@ impl Calculator {
         let mut bracket: u32 = 0;    //括号标记
         let expr = &self.expression;
         let bytes = self.expression.as_bytes();
-        const PI: f64 = 3.141592653589793;
-        const MAX: f64 = 999999999999999.9;
-        const MIN: f64 = -999999999999999.9;
+        let pi = Float::with_val(128, Float::parse("3.1415926535897932384626433832795").unwrap());
+        let max = Float::with_val(2560, Float::parse("1e+768").unwrap());
+        let min = Float::with_val(2560, Float::parse("-1e+768").unwrap());
 
         let priority = |x: &u8| -> u8 {
             match x {
@@ -38,13 +40,24 @@ impl Calculator {
             }
         };
 
-        let computing = |x: &u8| -> Result<f64, String> {
+        let fmod = |x: &Float, n: &Float| -> Float {
+            let m = Float::with_val(2560, x/n);
+            let mut res = Float::new(2560);
+            if x < &0.0 {
+                res = m.ceil();
+            }else{
+                res = m.floor();
+            }
+            x-res*n
+        };
+
+        let computing = |x: &u8| -> Result<Float, String> {
             match x {
                 b'+' => {
                     let c1 = self.numbers.borrow_mut().pop().unwrap();
                     let c2 = self.numbers.borrow_mut().pop().unwrap();
                     let res = c2 + c1;
-                    if MAX >= res && MIN <= res {    //控制在绝对精度范围。
+                    if max >= res && min <= res {    //控制在绝对精度范围。
                         return Ok(res);
                     }
                     return Err("Beyond the precision range".to_string());
@@ -54,7 +67,7 @@ impl Calculator {
                     let c1 = self.numbers.borrow_mut().pop().unwrap();
                     let c2 = self.numbers.borrow_mut().pop().unwrap();
                     let res = c2 - c1;
-                    if MAX >= res && MIN <= res {    //控制在绝对精度范围。
+                    if max >= res && min <= res {    //控制在绝对精度范围。
                         return Ok(res);
                     }
                     return Err("Beyond the precision range".to_string());
@@ -64,7 +77,7 @@ impl Calculator {
                     let c1 = self.numbers.borrow_mut().pop().unwrap();
                     let c2 = self.numbers.borrow_mut().pop().unwrap();
                     let res = c2 * c1;
-                    if MAX >= res && MIN <= res {    //控制在绝对精度范围。
+                    if max >= res && min <= res {    //控制在绝对精度范围。
                         return Ok(res);
                     }
                     return Err("Beyond the precision range".to_string());
@@ -77,7 +90,7 @@ impl Calculator {
                         return Err("Divide by zero".to_string());
                     }
                     let res = c2 / c1;
-                    if MAX >= res && MIN <= res {    //控制在绝对精度范围。
+                    if max >= res && min <= res {    //控制在绝对精度范围。
                         return Ok(res);
                     }
                     return Err("Beyond the precision range".to_string());
@@ -89,8 +102,8 @@ impl Calculator {
                     if c1 == 0.0 {
                         return Err("Divide by zero".to_string());
                     }
-                    let res = c2 % c1;
-                    if MAX >= res && MIN <= res {    //控制在绝对精度范围。
+                    let res = fmod(&c2, &c1);
+                    if max >= res && min <= res {    //控制在绝对精度范围。
                         return Ok(res);
                     }
                     return Err("Beyond the precision range".to_string());
@@ -99,8 +112,8 @@ impl Calculator {
                 b'^' => {
                     let c1 = self.numbers.borrow_mut().pop().unwrap();
                     let c2 = self.numbers.borrow_mut().pop().unwrap();
-                    let res = c2.powf(c1);
-                    if MAX >= res && MIN <= res {    //控制在绝对精度范围。
+                    let res = c2.pow(c1);
+                    if max >= res && min <= res {    //控制在绝对精度范围。
                         return Ok(res);
                     }
                     return Err("Beyond the precision range".to_string());
@@ -133,9 +146,10 @@ impl Calculator {
                     }
 
                     if sign != b'A' {
-                        match expr[locat..index].parse::<f64>() {    //将运算符前的数字取出来
-                            Ok(value) => {
-                                if MAX < value || MIN > value {    //控制在绝对精度范围。
+                        match Float::parse(&expr[locat..index]) {    //将运算符前的数字取出来
+                            Ok(valid) => {
+                                let value = Float::with_val(2560, valid);
+                                if max < value || min > value {    //控制在绝对精度范围。
                                     return Err("Beyond the precision range".to_string());
                                 }
                                 self.numbers.borrow_mut().push(value);    //读取的数字进栈
@@ -182,9 +196,10 @@ impl Calculator {
 
                 b')' => {
                     if sign != b'A' && vernier == b'A' {    //上一次进栈是运算符，同时括号前必须是数字。
-                        match expr[locat..index].parse::<f64>() {   //将运算符前的数字取出来
-                            Ok(value) => {
-                                if MAX < value || MIN > value {    //控制在绝对精度范围。
+                        match Float::parse(&expr[locat..index]) {    //将运算符前的数字取出来
+                            Ok(valid) => {
+                                let value = Float::with_val(2560, valid);
+                                if max < value || min > value {    //控制在绝对精度范围。
                                     return Err("Beyond the precision range".to_string());
                                 }
                                 self.numbers.borrow_mut().push(value);   //读取的数字进栈
@@ -220,9 +235,10 @@ impl Calculator {
                     }
 
                     if sign != b'A' {
-                        match expr[locat..index].parse::<f64>() {   //将运算符前的数字取出来
-                            Ok(value) => {
-                                if MAX < value || MIN > value {    //控制在绝对精度范围。
+                        match Float::parse(&expr[locat..index]) {    //将运算符前的数字取出来
+                            Ok(valid) => {
+                                let value = Float::with_val(2560, valid);
+                                if max < value || min > value {    //控制在绝对精度范围。
                                     return Err("Beyond the precision range".to_string());
                                 }
                                 self.numbers.borrow_mut().push(value);   //读取的数字进栈
@@ -246,11 +262,12 @@ impl Calculator {
 
                 b'A' => {
                     if sign != b'A' && vernier != b'B' && vernier != 0 || vernier == b'F' || vernier == b')' {
-                        let mut res: f64 = 0.0;
+                        let mut res = Float::new(2560);
                         if vernier != b'F' && vernier != b')' {
-                            match expr[locat..index].parse::<f64>() {   //将运算符前的数字取出来
-                                Ok(value) => {
-                                    if MAX < value || MIN > value {    //控制在绝对精度范围。
+                            match Float::parse(&expr[locat..index]) {    //将运算符前的数字取出来
+                                Ok(valid) => {
+                                    let value = Float::with_val(2560, valid);
+                                    if max < value || min > value {    //控制在绝对精度范围。
                                         return Err("Beyond the precision range".to_string());
                                     }
                                     res = value.abs();
@@ -272,11 +289,12 @@ impl Calculator {
 
                 b'S' => {
                     if sign != b'A' && vernier != b'B' && vernier != 0 || vernier == b'F' || vernier == b')' {
-                        let mut res: f64 = 0.0;
+                        let mut res = Float::new(2560);
                         if vernier != b'F' && vernier != b')' {
-                            match expr[locat..index].parse::<f64>() {   //将运算符前的数字取出来
-                                Ok(value) => {
-                                    if MAX < value || MIN > value {    //控制在绝对精度范围。
+                            match Float::parse(&expr[locat..index]) {    //将运算符前的数字取出来
+                                Ok(valid) => {
+                                    let value = Float::with_val(2560, valid);
+                                    if max < value || min > value {    //控制在绝对精度范围。
                                         return Err("Beyond the precision range".to_string());
                                     }
                                     res = value.sqrt();
@@ -301,8 +319,12 @@ impl Calculator {
 
                 b'P' => {
                     if sign != b'A' && vernier != b'A' {     //标记符前面必须是字符或者为空
-                        let pi = if vernier == b'-' { 0.0 - PI } else { PI };
-                        self.numbers.borrow_mut().push(pi);    //Pi常量进入数字栈
+                        let pi2 = if vernier == b'-' {
+                            Float::with_val(2560, 0.0 - &pi)
+                        }else {
+                            Float::with_val(2560, &pi)
+                        };
+                        self.numbers.borrow_mut().push(pi2);    //pi常量进入数字栈
                         locat = index + 1;    //移动切片定位
                         vernier = b'F';
                         sign = b'A';
@@ -325,7 +347,7 @@ fn main() {
         std::io::stdin().read_line(&mut expr).expect("Failed to read line");
         let test = Calculator::new(expr);
         match test.run() {    //在终端打印单次计算结果，或者错误信息。
-            Ok(value) => println!("{}", RGB(30, 144, 255).bold().paint("=".to_owned() + &value.to_string())),
+            Ok(value) => println!("{}", RGB(30, 144, 255).bold().paint("=".to_owned() + &value.to_string_radix(10, Some(4)))),
             Err(msg) => println!("{}", RGB(255, 0, 0).paint(msg)),
         }
     }
