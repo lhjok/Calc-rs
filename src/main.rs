@@ -1,5 +1,5 @@
-use rug::Float;
 use rug::ops::Pow;
+use rug::{float::Constant, Float};
 use std::process::exit;
 use std::cell::RefCell;
 use ansi_term::Colour::RGB;
@@ -19,6 +19,26 @@ impl Calculator {
         }
     }
 
+    fn priority(x: &u8) -> u8 {
+        match x {
+            b'+' | b'-' => 1,
+            b'*' | b'/' | b'%' => 2,
+            b'^' => 3,
+            _ => exit(0),
+        }
+    }
+
+    fn fmod(x: &Float, n: &Float) -> Float {
+        let m = Float::with_val(2560, x / n);
+        let mut res = Float::new(2560);
+        if x < &0.0 {
+            res = m.ceil();
+        } else {
+            res = m.floor();
+        }
+        x - res * n
+    }
+
     pub fn run(&self) -> Result<Float, String> {
 
         let mut sign: u8 = 0;   //入栈签名
@@ -27,29 +47,9 @@ impl Calculator {
         let mut bracket: u32 = 0;    //括号标记
         let expr = &self.expression;
         let bytes = self.expression.as_bytes();
-        let pi = Float::with_val(128, Float::parse("3.1415926535897932384626433832795").unwrap());
+        let pi = Float::with_val(128, Constant::Pi);
         let max = Float::with_val(2560, Float::parse("1e+768").unwrap());
         let min = Float::with_val(2560, Float::parse("-1e+768").unwrap());
-
-        let priority = |x: &u8| -> u8 {
-            match x {
-                b'+' | b'-' => 1,
-                b'*' | b'/' | b'%' => 2,
-                b'^' => 3,
-                _ => exit(0),
-            }
-        };
-
-        let fmod = |x: &Float, n: &Float| -> Float {
-            let m = Float::with_val(2560, x/n);
-            let mut res = Float::new(2560);
-            if x < &0.0 {
-                res = m.ceil();
-            }else{
-                res = m.floor();
-            }
-            x-res*n
-        };
 
         let computing = |x: &u8| -> Result<Float, String> {
             match x {
@@ -102,7 +102,7 @@ impl Calculator {
                     if c1 == 0.0 {
                         return Err("Divide by zero".to_string());
                     }
-                    let res = fmod(&c2, &c1);
+                    let res = Calculator::fmod(&c2, &c1);
                     if max >= res && min <= res {    //控制在绝对精度范围。
                         return Ok(res);
                     }
@@ -160,8 +160,8 @@ impl Calculator {
                     }
 
                     while self.operator.borrow().len() != 0 && self.operator.borrow().last().unwrap() != &b'(' {
-                        let p1 = priority(self.operator.borrow().last().unwrap());
-                        let p2 = priority(&ch);
+                        let p1 = Calculator::priority(self.operator.borrow().last().unwrap());
+                        let p2 = Calculator::priority(&ch);
                         if p1 >= p2 {    //优先级比较
                             let res = computing(self.operator.borrow().last().unwrap());    //调用二元运算函数
                             match res {
@@ -324,7 +324,7 @@ impl Calculator {
                         }else {
                             Float::with_val(2560, &pi)
                         };
-                        self.numbers.borrow_mut().push(pi2);    //pi常量进入数字栈
+                        self.numbers.borrow_mut().push(pi2);    //pi2进入数字栈
                         locat = index + 1;    //移动切片定位
                         vernier = b'F';
                         sign = b'A';
@@ -347,7 +347,7 @@ fn main() {
         std::io::stdin().read_line(&mut expr).expect("Failed to read line");
         let test = Calculator::new(expr);
         match test.run() {    //在终端打印单次计算结果，或者错误信息。
-            Ok(value) => println!("{}", RGB(30, 144, 255).bold().paint("=".to_owned() + &value.to_string_radix(10, Some(4)))),
+            Ok(value) => println!("{}", RGB(30, 144, 255).bold().paint("=".to_owned() + &value.to_string_radix(10, Some(5)))),
             Err(msg) => println!("{}", RGB(255, 0, 0).paint(msg)),
         }
     }
