@@ -31,7 +31,7 @@ impl Calculator {
     fn fmod(x: &Float, n: &Float) -> Float {
         let m = Float::with_val(2560, x / n);
         let mut res = Float::new(2560);
-        if x < &0.0 {
+        if x < 0.0 {
             res = m.ceil();
         } else {
             res = m.floor();
