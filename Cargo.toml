@@ -1,6 +1,6 @@
 [package]
-name = "Calc-rs"
-version = "1.1.0"
+name = "Calc"
+version = "1.2.0"
 authors = ["lhjok <lhjok@live.cn>"]
 edition = "2018"
 
