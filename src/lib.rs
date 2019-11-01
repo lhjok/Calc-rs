@@ -56,46 +56,21 @@ impl Calculator {
             if x == &b'/' && c1 == 0.0 || x == &b'%' && c1 == 0.0 {
                 return Err("Divide by zero".to_string());
             }
+            let scope = |value: Float| -> Result<Float, String> {
+                if max < value || min > value {
+                    return Err("Beyond the precision range".to_string());
+                }
+                return Ok(value);
+            };
             match x {
-                b'+' => {
-                    let res = c2 + c1;
-                    if max >= res && min <= res {
-                        return Ok(res);
-                    }
-                }
-                b'-' => {
-                    let res = c2 - c1;
-                    if max >= res && min <= res {
-                        return Ok(res);
-                    }
-                }
-                b'*' => {
-                    let res = c2 * c1;
-                    if max >= res && min <= res {
-                        return Ok(res);
-                    }
-                }
-                b'/' => {
-                    let res = c2 / c1;
-                    if max >= res && min <= res {
-                        return Ok(res);
-                    }
-                }
-                b'%' => {
-                    let res = Calculator::fmod(&c2, &c1);
-                    if max >= res && min <= res {
-                        return Ok(res);
-                    }
-                }
-                b'^' => {
-                    let res = c2.pow(c1);
-                    if max >= res && min <= res {
-                        return Ok(res);
-                    }
-                }
-                _ => exit(0),
+                b'+' => return scope(c2 + c1),
+                b'-' => return scope(c2 - c1),
+                b'*' => return scope(c2 * c1),
+                b'/' => return scope(c2 / c1),
+                b'%' => return scope(Calculator::fmod(&c2, &c1)),
+                b'^' => return scope(c2.pow(c1)),
+                _ => return Err("Error".to_string()),
             }
-            return Err("Beyond the precision range".to_string());
         };
 
         let intercept = |n: usize, i: usize| -> Result<Float, String> {
