@@ -53,56 +53,82 @@ impl Calculator {
         let computing = |x: &u8| -> Result<Float, String> {
             let c1 = self.numbers.borrow_mut().pop().unwrap();
             let c2 = self.numbers.borrow_mut().pop().unwrap();
+            if x == &b'/' && c1 == 0.0 || x == &b'%' && c1 == 0.0 {
+                return Err("Divide by zero".to_string());
+            }
             match x {
                 b'+' => {
                     let res = c2 + c1;
                     if max >= res && min <= res {
                         return Ok(res);
                     }
-                    return Err("Beyond the precision range".to_string());
                 }
                 b'-' => {
                     let res = c2 - c1;
                     if max >= res && min <= res {
                         return Ok(res);
                     }
-                    return Err("Beyond the precision range".to_string());
                 }
                 b'*' => {
                     let res = c2 * c1;
                     if max >= res && min <= res {
                         return Ok(res);
                     }
-                    return Err("Beyond the precision range".to_string());
                 }
                 b'/' => {
-                    if c1 != 0.0 {
-                        let res = c2 / c1;
-                        if max >= res && min <= res {
-                            return Ok(res);
-                        }
-                        return Err("Beyond the precision range".to_string());
+                    let res = c2 / c1;
+                    if max >= res && min <= res {
+                        return Ok(res);
                     }
-                    return Err("Divide by zero".to_string());
                 }
                 b'%' => {
-                    if c1 != 0.0 {
-                        let res = Calculator::fmod(&c2, &c1);
-                        if max >= res && min <= res {
-                            return Ok(res);
-                        }
-                        return Err("Beyond the precision range".to_string());
+                    let res = Calculator::fmod(&c2, &c1);
+                    if max >= res && min <= res {
+                        return Ok(res);
                     }
-                    return Err("Divide by zero".to_string());
                 }
                 b'^' => {
                     let res = c2.pow(c1);
                     if max >= res && min <= res {
                         return Ok(res);
                     }
-                    return Err("Beyond the precision range".to_string());
                 }
                 _ => exit(0),
+            }
+            return Err("Beyond the precision range".to_string());
+        };
+
+        let intercept = |n: usize, i: usize| -> Result<Float, String> {
+            match Float::parse(&expr[n..i]) {
+                Ok(valid) => {
+                    let value = Float::with_val(2560, valid);
+                    if max < value || min > value {
+                        return Err("Beyond the precision range".to_string());
+                    }
+                    return Ok(value);
+                }
+                Err(_) => return Err("Invalid number".to_string()),
+            }
+        };
+
+        let maths = |ch: u8, value: Float| -> Result<Float, String> {
+            if ch == b'l' && value < 0.0 || ch == b'L'
+               && value < 0.0 || ch == b'S' && value < 0.0 {
+                return Err("Expression error".to_string());
+            }
+            match ch {
+                b'A' => return Ok(value.abs()),
+                b'c' => return Ok(value.cos()),
+                b's' => return Ok(value.sin()),
+                b't' => return Ok(value.tan()),
+                b'C' => return Ok(value.cosh()),
+                b'I' => return Ok(value.sinh()),
+                b'T' => return Ok(value.tanh()),
+                b'E' => return Ok(value.exp()),
+                b'l' => return Ok(value.ln()),
+                b'L' => return Ok(value.log2()),
+                b'S' => return Ok(value.sqrt()),
+                _ => return Err("Error".to_string()),
             }
         };
 
@@ -129,17 +155,11 @@ impl Calculator {
                     }
 
                     if sign != b'A' {
-                        match Float::parse(&expr[locat..index]) {
-                            Ok(valid) => {
-                                let value = Float::with_val(2560, valid);
-                                if max < value || min > value {
-                                    return Err("Beyond the precision range".to_string());
-                                }
-                                self.numbers.borrow_mut().push(value);
-                                sign = b'A';
-                            }
-                            Err(_) => return Err("Invalid number".to_string()),
+                        match intercept(locat, index) {
+                            Ok(value) => self.numbers.borrow_mut().push(value),
+                            Err(err) => return Err(err),
                         }
+                        sign = b'A';
                     }
 
                     while self.operator.borrow().len() != 0 && self.operator.borrow().last().unwrap() != &b'(' {
@@ -179,17 +199,11 @@ impl Calculator {
 
                 b')' => {
                     if sign != b'A' && vernier == b'A' {
-                        match Float::parse(&expr[locat..index]) {
-                            Ok(valid) => {
-                                let value = Float::with_val(2560, valid);
-                                if max < value || min > value {
-                                    return Err("Beyond the precision range".to_string());
-                                }
-                                self.numbers.borrow_mut().push(value);
-                                sign = b'A';
-                            }
-                            Err(_) => return Err("Invalid number".to_string()),
+                        match intercept(locat, index) {
+                            Ok(value) => self.numbers.borrow_mut().push(value),
+                            Err(err) => return Err(err),
                         }
+                        sign = b'A';
                     }
 
                     if bracket > 0 && sign == b'A' {
@@ -218,17 +232,11 @@ impl Calculator {
                     }
 
                     if sign != b'A' {
-                        match Float::parse(&expr[locat..index]) {
-                            Ok(valid) => {
-                                let value = Float::with_val(2560, valid);
-                                if max < value || min > value {
-                                    return Err("Beyond the precision range".to_string());
-                                }
-                                self.numbers.borrow_mut().push(value);
-                                sign = b'A';
-                            }
-                            Err(_) => return Err("Invalid number".to_string()),
+                        match intercept(locat, index) {
+                            Ok(value) => self.numbers.borrow_mut().push(value),
+                            Err(err) => return Err(err),
                         }
+                        sign = b'A';
                     }
 
                     while self.operator.borrow().len() != 0 {
@@ -249,50 +257,19 @@ impl Calculator {
                     if sign != b'A' && vernier != b'B' && vernier != 0 || vernier == b'F' || vernier == b')' {
                         let mut res = Float::new(2560);
                         if vernier != b'F' && vernier != b')' {
-                            match Float::parse(&expr[locat..index]) {
+                            match intercept(locat, index) {
                                 Ok(valid) => {
-                                    let value = Float::with_val(2560, valid);
-                                    if max < value || min > value {
-                                        return Err("Beyond the precision range".to_string());
-                                    }
-                                    if ch == b'l' || ch == b'L' || ch == b'S' && value < 0.0 {
-                                        return Err("Expression error".to_string());
-                                    }
-                                    match ch {
-                                        b'A' => res = value.abs(),
-                                        b'c' => res = value.cos(),
-                                        b's' => res = value.sin(),
-                                        b't' => res = value.tan(),
-                                        b'C' => res = value.cosh(),
-                                        b'I' => res = value.sinh(),
-                                        b'T' => res = value.tanh(),
-                                        b'E' => res = value.exp(),
-                                        b'l' => res = value.ln(),
-                                        b'L' => res = value.log2(),
-                                        b'S' => res = value.sqrt(),
-                                        _ => return Err("Operator error".to_string()),
+                                    match maths(ch, valid) {
+                                        Ok(value) => res = value,
+                                        Err(err) => return Err(err),
                                     }
                                 }
-                                Err(_) => return Err("Invalid number".to_string()),
+                                Err(err) => return Err(err),
                             }
                         } else {
-                            let value = self.numbers.borrow_mut().pop().unwrap();
-                            if ch == b'l' || ch == b'L' || ch == b'S' && value < 0.0 {
-                                return Err("Expression error".to_string());
-                            }
-                            match ch {
-                                b'A' => res = value.abs(),
-                                b'c' => res = value.cos(),
-                                b's' => res = value.sin(),
-                                b't' => res = value.tan(),
-                                b'C' => res = value.cosh(),
-                                b'I' => res = value.sinh(),
-                                b'T' => res = value.tanh(),
-                                b'E' => res = value.exp(),
-                                b'l' => res = value.ln(),
-                                b'L' => res = value.log2(),
-                                b'S' => res = value.sqrt(),
-                                _ => return Err("Operator error".to_string()),
+                            match maths(ch, self.numbers.borrow_mut().pop().unwrap()) {
+                                Ok(value) => res = value,
+                                Err(err) => return Err(err),
                             }
                         }
 
@@ -324,6 +301,6 @@ impl Calculator {
                 _ => return Err("Operator error".to_string()),
             }
         }
-        Err("Possible error".to_string())
+        Err("Error".to_string())
     }
 }
