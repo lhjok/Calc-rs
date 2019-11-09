@@ -39,6 +39,7 @@ impl Calculator {
             if v == &b'e' {
                 temp = fix[..i].to_string();
                 exp = fix[i+1..].parse::<i32>().unwrap();
+                break;
             }
         }
 
