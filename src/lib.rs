@@ -228,7 +228,6 @@ impl Calculator {
                             bracket = bracket + 1;
                             vernier = b'(';
                             continue;
-
                         }
                     }
                     return Err("Expression error".to_string());
@@ -262,7 +261,6 @@ impl Calculator {
                             continue;
                         }
                     }
-
                     return Err("Expression error".to_string());
                 }
 
