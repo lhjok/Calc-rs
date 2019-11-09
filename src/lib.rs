@@ -28,8 +28,9 @@ impl Calculator {
     }
 
     pub fn to_fixed(src: Float) -> String {
+        let mut x: usize = 0;
+        let mut exp: i32 = 0;
         let mut zero: usize = 0;
-        let mut exp: usize = 0;
         let mut temp = String::new();
         let mut res = String::new();
         let fix: String = src.to_string_radix(10, None);
@@ -37,31 +38,36 @@ impl Calculator {
         for (i, v) in fix.as_bytes().iter().enumerate() {
             if v == &b'e' {
                 temp = fix[..i].to_string();
-                exp = fix[i+1..].parse::<usize>().unwrap() + 1;
+                exp = fix[i+1..].parse::<i32>().unwrap();
             }
         }
 
-        if exp == 0 {
-            temp = fix;
-        }
-
+        if exp == 0 { temp = fix; }
         for (i, v) in temp.as_bytes().iter().enumerate() {
             if v == &b'.'{
                 let a = temp[..i].to_string();
-                let b = &temp[i+1..].to_string();
-                res = a + b;
+                let b = temp[i+1..].to_string();
+                res = a + &b;
             }
 
             zero += 1;
-            if v != &b'0' {
-                zero = 0;
-            }
+            if v != &b'0' { zero = 0; }
+            if exp < 0 && v == &b'-' { x = 1; }
 
             if v == &b'-' && exp == 0 {
                 exp += 2;
-            } else if v == &b'-' {
+            } else if v == &b'-' && exp > 0 {
                 exp += 1;
             }
+        }
+
+        if exp < 0 {
+            exp = exp.abs();
+            for _ in 0..exp {
+                res.insert(x,'0');
+                exp -= 1;
+            }
+            if x != 0 { exp += 1; }
         }
 
         if exp == 0 && res.len() - zero <= 1 {
@@ -72,9 +78,10 @@ impl Calculator {
             return res;
         }
 
-        res.insert(exp,'.');
-        if exp >= res.len() - 1 - zero {
-            return res[..exp].to_string();
+        let uexp = exp as usize + 1;
+        res.insert(uexp,'.');
+        if uexp >= res.len() - 1 - zero {
+            return res[..uexp].to_string();
         }
         res = res[..res.len() - zero].to_string();
         res
