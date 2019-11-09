@@ -3,7 +3,15 @@ use rug::{float::Constant, Float};
 use std::cell::RefCell;
 use std::process::exit;
 
+#[derive(Clone)]
+enum Sign {
+    Init,
+    Data,
+    Char
+}
+
 pub struct Calculator {
+    sign: RefCell<Sign>,
     numbers: RefCell<Vec<Float>>,
     operator: RefCell<Vec<u8>>,
     expression: String,
@@ -12,10 +20,64 @@ pub struct Calculator {
 impl Calculator {
     pub fn new(expr: String) -> Self {
         Calculator {
+            sign: RefCell::new(Sign::Init),
             numbers: RefCell::new(Vec::new()),
             operator: RefCell::new(Vec::new()),
             expression: expr + "=",
         }
+    }
+
+    pub fn to_fixed(src: Float) -> String {
+        let mut zero: usize = 0;
+        let mut exp: usize = 0;
+        let mut temp = String::new();
+        let mut res = String::new();
+        let fix: String = src.to_string_radix(10, None);
+
+        for (i, v) in fix.as_bytes().iter().enumerate() {
+            if v == &b'e' {
+                temp = fix[..i].to_string();
+                exp = fix[i+1..].parse::<usize>().unwrap() + 1;
+            }
+        }
+
+        if exp == 0 {
+            temp = fix;
+        }
+
+        for (i, v) in temp.as_bytes().iter().enumerate() {
+            if v == &b'.'{
+                let a = temp[..i].to_string();
+                let b = &temp[i+1..].to_string();
+                res = a + b;
+            }
+
+            zero += 1;
+            if v != &b'0' {
+                zero = 0;
+            }
+
+            if v == &b'-' && exp == 0 {
+                exp += 2;
+            } else if v == &b'-' {
+                exp += 1;
+            }
+        }
+
+        if exp == 0 && res.len() - zero <= 1 {
+            return res[..res.len() - zero].to_string();
+        } else if exp == 0 && res.len() - zero > 1 {
+            res = res[..res.len() - zero].to_string();
+            res.insert(1,'.');
+            return res;
+        }
+
+        res.insert(exp,'.');
+        if exp >= res.len() - 1 - zero {
+            return res[..exp].to_string();
+        }
+        res = res[..res.len() - zero].to_string();
+        res
     }
 
     fn priority(x: &u8) -> u8 {
@@ -41,7 +103,7 @@ impl Calculator {
         let expr = &self.expression;
         let mut locat: usize = 0; //切片定位
         let mut bracket: u32 = 0; //括号标记
-        let (mut sign, mut vernier) = (b'0', b'0'); //入栈签名，移动游标。
+        let mut vernier: u8 = b'0'; //移动游标
         let pi = Float::with_val(128, Constant::Pi);
         let max = Float::with_val(2560, Float::parse("1e+768").unwrap());
         let min = Float::with_val(2560, Float::parse("-1e+768").unwrap());
@@ -84,8 +146,8 @@ impl Calculator {
 
         let maths = |ch: u8, value: Float| -> Result<Float, String> {
             if ch == b'l' && value < 0.0 || ch == b'L'
-               && value < 0.0 || ch == b'S' && value < 0.0 {
-                return Err("Expression error".to_string());
+                && value < 0.0 || ch == b'S' && value < 0.0 {
+                    return Err("Expression error".to_string());
             }
             match ch {
                 b'A' => return Ok(value.abs()),
@@ -126,12 +188,12 @@ impl Calculator {
                         return Err("Expression error".to_string());
                     }
 
-                    if sign != b'A' {
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
                         match intercept(locat, index) {
                             Ok(value) => num.borrow_mut().push(value),
                             Err(err) => return Err(err),
                         }
-                        sign = b'A';
+                        *self.sign.borrow_mut() = Sign::Data;
                     }
 
                     while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
@@ -152,63 +214,71 @@ impl Calculator {
                     }
 
                     ope.borrow_mut().push(ch);
+                    *self.sign.borrow_mut() = Sign::Char;
                     locat = index + 1;
                     vernier = b'B';
-                    sign = b'B';
                     continue;
                 }
 
                 ch @ b'(' => {
-                    if sign != b'A' && vernier != b'A' && vernier != b'-' {
-                        ope.borrow_mut().push(ch);
-                        locat = index + 1;
-                        bracket = bracket + 1;
-                        vernier = b'(';
-                        continue;
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        if vernier != b'A' && vernier != b'-' {
+                            ope.borrow_mut().push(ch);
+                            locat = index + 1;
+                            bracket = bracket + 1;
+                            vernier = b'(';
+                            continue;
+
+                        }
                     }
                     return Err("Expression error".to_string());
                 }
 
                 b')' => {
-                    if sign != b'A' && vernier == b'A' {
-                        match intercept(locat, index) {
-                            Ok(value) => num.borrow_mut().push(value),
-                            Err(err) => return Err(err),
-                        }
-                        sign = b'A';
-                    }
-
-                    if bracket > 0 && sign == b'A' {
-                        while ope.borrow().last().unwrap() != &b'(' {
-                            let res = computing(&ope.borrow_mut().pop().unwrap());
-                            match res {
-                                Ok(_) => num.borrow_mut().push(res.unwrap()),
-                                Err(_) => return res,
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        if vernier == b'A' {
+                            match intercept(locat, index) {
+                                Ok(value) => num.borrow_mut().push(value),
+                                Err(err) => return Err(err),
                             }
+                            *self.sign.borrow_mut() = Sign::Data;
                         }
-
-                        ope.borrow_mut().pop();
-                        locat = index + 1;
-                        bracket = bracket - 1;
-                        vernier = b')';
-                        continue;
                     }
+
+                    if let Sign::Data = self.sign.clone().into_inner() {
+                        if bracket > 0 {
+                            while ope.borrow().last().unwrap() != &b'(' {
+                                let res = computing(&ope.borrow_mut().pop().unwrap());
+                                match res {
+                                    Ok(_) => num.borrow_mut().push(res.unwrap()),
+                                    Err(_) => return res,
+                                }
+                            }
+
+                            ope.borrow_mut().pop();
+                            locat = index + 1;
+                            bracket = bracket - 1;
+                            vernier = b')';
+                            continue;
+                        }
+                    }
+
                     return Err("Expression error".to_string());
                 }
 
                 b'=' | b'\n' | b'\r' => {
-                    if vernier == 0 {
+                    if vernier == b'0' {
                         return Err("Empty expression".to_string());
                     } else if bracket > 0 || vernier == b'-' || vernier == b'B' {
                         return Err("Expression error".to_string());
                     }
 
-                    if sign != b'A' {
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
                         match intercept(locat, index) {
                             Ok(value) => num.borrow_mut().push(value),
                             Err(err) => return Err(err),
                         }
-                        sign = b'A';
+                        *self.sign.borrow_mut() = Sign::Data;
                     }
 
                     while ope.borrow().len() != 0 {
@@ -226,48 +296,52 @@ impl Calculator {
                 ch @ b'A' | ch @ b'S' | ch @ b'c' | ch @ b's' | ch @ b't' | ch @ b'C'
                 | ch @ b'I' | ch @ b'T' | ch @ b'l' | ch @ b'L' | ch @ b'E' =>
                 {
-                    if sign != b'A' && vernier != b'B' && vernier != 0
-                       || vernier == b'F' || vernier == b')' 
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner()
                     {
-                        if vernier != b'F' && vernier != b')' {
-                            match intercept(locat, index) {
-                                Ok(valid) => {
-                                    match maths(ch, valid) {
-                                        Ok(value) => num.borrow_mut().push(value),
-                                        Err(err) => return Err(err),
+                        if vernier != b'B' && vernier != 0 || vernier == b'F' || vernier == b')'
+                        {
+                            if vernier != b'F' && vernier != b')' {
+                                match intercept(locat, index) {
+                                    Ok(valid) => {
+                                        match maths(ch, valid) {
+                                            Ok(value) => num.borrow_mut().push(value),
+                                            Err(err) => return Err(err),
+                                        }
                                     }
+                                    Err(err) => return Err(err),
                                 }
-                                Err(err) => return Err(err),
+                            } else {
+                                match maths(ch, num.borrow_mut().pop().unwrap()) {
+                                    Ok(value) => num.borrow_mut().push(value),
+                                    Err(err) => return Err(err),
+                                }
                             }
-                        } else {
-                            match maths(ch, num.borrow_mut().pop().unwrap()) {
-                                Ok(value) => num.borrow_mut().push(value),
-                                Err(err) => return Err(err),
-                            }
-                        }
 
-                        locat = index + 1;
-                        vernier = b'F';
-                        sign = b'A';
-                        continue;
+                            *self.sign.borrow_mut() = Sign::Data;
+                            locat = index + 1;
+                            vernier = b'F';
+                            continue;
+                        }
                     }
                     return Err("Expression error".to_string());
                 }
 
                 b'P' => {
-                    if sign != b'A' && vernier != b'A' {
-                        let pi2 = if vernier == b'-' {
-                            Float::with_val(128, 0.0 - &pi)
-                        } else {
-                            Float::with_val(128, &pi)
-                        };
-                        num.borrow_mut().push(pi2);
-                        locat = index + 1;
-                        vernier = b'F';
-                        sign = b'A';
-                        continue;
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        if vernier != b'A' {
+                            let pi2 = if vernier == b'-' {
+                                Float::with_val(128, 0.0 - &pi)
+                            } else {
+                                Float::with_val(128, &pi)
+                            };
+                            num.borrow_mut().push(pi2);
+                            *self.sign.borrow_mut() = Sign::Data;
+                            locat = index + 1;
+                            vernier = b'F';
+                            continue;
+                        }
+                        return Err("Expression error".to_string());
                     }
-                    return Err("Expression error".to_string());
                 }
 
                 _ => return Err("Operator error".to_string()),
