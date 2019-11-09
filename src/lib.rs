@@ -49,16 +49,10 @@ impl Calculator {
                 let b = temp[i+1..].to_string();
                 res = a + &b;
             }
-
             zero += 1;
             if v != &b'0' { zero = 0; }
             if exp < 0 && v == &b'-' { x = 1; }
-
-            if v == &b'-' && exp == 0 {
-                exp += 2;
-            } else if v == &b'-' && exp > 0 {
-                exp += 1;
-            }
+            if v == &b'-' && exp >= 0 { exp += 1; }
         }
 
         if exp < 0 {
