@@ -11,7 +11,7 @@ fn main() {
         match test.run() {
             Ok(value) => {
                 println!("{}", RGB(30, 144, 255).bold()
-                    .paint("=".to_owned() + &Calculator::to_fixed(value)));
+                    .paint("=".to_owned() + &Calculator::to_fixed_round(value, Some(5))));
                 }
             Err(msg) => println!("{}", RGB(255, 0, 0).paint(msg)),
         }

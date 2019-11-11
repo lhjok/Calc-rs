@@ -1,6 +1,6 @@
 use rug::ops::Pow;
 use rug::{float::Constant, Float};
-use std::cell::RefCell;
+use std::{char::from_digit, cell::RefCell};
 use std::process::exit;
 
 #[derive(Clone)]
@@ -27,7 +27,7 @@ impl Calculator {
         }
     }
 
-    pub fn to_fixed(src: Float) -> String {
+    fn to_fixed(src: Float) -> String {
         let mut x: usize = 0;
         let mut exp: i32 = 0;
         let mut zero: usize = 0;
@@ -80,6 +80,82 @@ impl Calculator {
         }
         res = res[..res.len() - zero].to_string();
         res
+    }
+
+    pub fn to_fixed_round(src: Float, digits: Option<usize>) -> String {
+        let fix = Calculator::to_fixed(src);
+        match digits {
+            None => return fix,
+            Some(x) => {
+                let mut dig: usize = 0;
+                let mut is: bool = false;
+                let mut res = String::new();
+                for (i, v) in fix.as_bytes().iter().enumerate() {
+                    if v == &b'.'{
+                        dig = 0;
+                        is = true;
+                    }
+                    dig += 1;
+                    if let None = fix.find('.') {
+                        return fix;
+                    } else if dig - 1 < x && fix.len() == i {
+                        return fix[..i].to_string();
+                    } else if is == true && dig - 1 == x && fix.len() > i {
+                        let a = fix[i..i+1].parse::<u32>().unwrap();
+                        let b = fix[i-1..i].parse::<u32>().unwrap();
+                        let c = fix[i-2..i-1].parse::<u32>().unwrap();
+                        res = fix[..i].to_string();
+                        if a < 5 {
+                            return res;
+                        } else if a > 4 && b < 9 {
+                            res.pop();
+                            res.push(from_digit(b+1, 10).unwrap());
+                            return res;
+                        } else if a > 4 && b == 9 && c < 9 {
+                            res.pop();
+                            res.push(from_digit(0, 10).unwrap());
+                            res.remove(res.len()-2);
+                            res.insert(res.len()-1, from_digit(c+1, 10).unwrap());
+                            return res;
+                        }
+                        break;
+                    }
+                }
+
+                let mut n = 0;
+                let rev = res.chars().rev().collect::<String>();
+                if let Some(_) = res.find('-') { n = 1; }
+                for (i, v) in rev.as_bytes().iter().enumerate() {
+                    if v == &b'.' || v == &b'-' {
+                        continue;
+                    }
+
+                    if rev.len()-1-n == i || rev.len()-1-n == i && v == &b'9' {
+                        let a = res.remove(0+n).to_digit(10).unwrap();
+                        res.insert_str(0+n, &(a+1).to_string());
+                        return res;
+                    }
+
+                    let mut b: u32 = 0;
+                    let a = rev[i..i+1].parse::<u32>().unwrap();
+                    let nonum = rev[i+1..i+2].as_bytes();
+                    if nonum != &[b'.'] && nonum != &[b'-'] {
+                        b = rev[i+1..i+2].parse::<u32>().unwrap();
+                    }
+
+                    if a == 9 {
+                        res.remove(res.len()-1-i);
+                        res.insert(res.len()-i, from_digit(0, 10).unwrap());
+                        if b + 1 <= 9 && nonum != &[b'.'] && nonum != &[b'-'] {
+                            res.remove(res.len()-2-i);
+                            res.insert(res.len()-1-i, from_digit(b+1, 10).unwrap());
+                            return res;
+                        }
+                    }
+                }
+                return res;
+            }
+        }
     }
 
     fn priority(x: &u8) -> u8 {
@@ -148,8 +224,8 @@ impl Calculator {
 
         let maths = |ch: u8, value: Float| -> Result<Float, String> {
             if ch == b'l' && value < 0.0 || ch == b'L'
-                && value < 0.0 || ch == b'S' && value < 0.0 {
-                    return Err("Expression error".to_string());
+               && value < 0.0 || ch == b'S' && value < 0.0 {
+                   return Err("Expression error".to_string());
             }
             match ch {
                 b'A' => return Ok(value.abs()),
