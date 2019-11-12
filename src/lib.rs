@@ -153,7 +153,7 @@ impl Calculator {
                         }
                     }
                 }
-                return res;
+                return fix;
             }
         }
     }
