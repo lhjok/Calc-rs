@@ -28,11 +28,10 @@ impl Calculator {
     }
 
     fn to_fixed(src: Float) -> String {
-        let mut x: usize = 0;
+
         let mut exp: i32 = 0;
-        let mut zero: usize = 0;
-        let mut temp = String::new();
-        let mut res = String::new();
+        let (mut zero, mut x) = (0, 0);
+        let (mut temp, mut res) = (String::new(), String::new());
         let fix: String = src.to_string_radix(10, None);
 
         for (i, v) in fix.as_bytes().iter().enumerate() {
@@ -90,6 +89,10 @@ impl Calculator {
                 let mut dig: usize = 0;
                 let mut is: bool = false;
                 let mut res = String::new();
+                if x < 3 {
+                    return "Set Accuracy Greater Than 2".to_string();
+                }
+
                 for (i, v) in fix.as_bytes().iter().enumerate() {
                     if v == &b'.'{
                         dig = 0;
@@ -124,7 +127,10 @@ impl Calculator {
 
                 let mut n = 0;
                 let rev = res.chars().rev().collect::<String>();
-                if let Some(_) = res.find('-') { n = 1; }
+                if let Some(_) = res.find('-') {
+                    n = 1;
+                }
+
                 for (i, v) in rev.as_bytes().iter().enumerate() {
                     if v == &b'.' || v == &b'-' {
                         continue;
@@ -139,6 +145,7 @@ impl Calculator {
                     let mut b: u32 = 0;
                     let a = rev[i..i+1].parse::<u32>().unwrap();
                     let nonum = rev[i+1..i+2].as_bytes();
+
                     if nonum != &[b'.'] && nonum != &[b'-'] {
                         b = rev[i+1..i+2].parse::<u32>().unwrap();
                     }
