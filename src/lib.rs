@@ -29,9 +29,8 @@ pub mod bignum {
         }
 
         fn to_fixed(src: Float) -> String {
-
             let mut exp: i32 = 0;
-            let (mut zero, mut x) = (0, 0);
+            let (mut zero, mut i_exp) = (0, 0);
             let (mut temp, mut res) = (String::new(), String::new());
             let fix: String = src.to_string_radix(10, None);
 
@@ -52,31 +51,31 @@ pub mod bignum {
                 }
                 zero += 1;
                 if v != &b'0' { zero = 0; }
-                if exp < 0 && v == &b'-' { x = 1; }
-                if v == &b'-' && exp >= 0 { exp += 1; }
+                if exp < 0 && v == &b'-' { i_exp = 1; }
+                if exp >= 0 && v == &b'-' { exp += 1; }
             }
 
             if exp < 0 {
                 exp = exp.abs();
                 for _ in 0..exp {
-                    res.insert(x,'0');
+                    res.insert(i_exp, '0');
                     exp -= 1;
                 }
-                if x != 0 { exp += 1; }
+                if i_exp != 0 { exp += 1; }
             }
 
             if exp == 0 && res.len() - zero <= 1 {
                 return res[..res.len() - zero].to_string();
             } else if exp == 0 && res.len() - zero > 1 {
                 res = res[..res.len() - zero].to_string();
-                res.insert(1,'.');
+                res.insert(1, '.');
                 return res;
             }
 
-            let uexp = exp as usize + 1;
-            res.insert(uexp,'.');
-            if uexp >= res.len() - 1 - zero {
-                return res[..uexp].to_string();
+            let u_exp = exp as usize + 1;
+            res.insert(u_exp, '.');
+            if u_exp >= res.len() - 1 - zero {
+                return res[..u_exp].to_string();
             }
             res = res[..res.len() - zero].to_string();
             res
@@ -87,17 +86,14 @@ pub mod bignum {
             match digits {
                 None => return fix,
                 Some(x) => {
-
-                    if x < 3 {
-                        return "Set Accuracy Greater Than 2".to_string();
-                    } else if let None = fix.find('.') {
+                    if let None = fix.find('.') {
                         return fix;
+                    } else if x < 3 {
+                        return "Set Accuracy Greater Than 2".to_string();
                     }
-
                     let mut dig: usize = 0;
                     let mut is: bool = false;
                     let mut res = String::new();
-
                     for (i, v) in fix.as_bytes().iter().enumerate() {
                         if v == &b'.'{
                             dig = 0;
@@ -129,26 +125,25 @@ pub mod bignum {
                     }
 
                     let mut n = 0;
-                    let rev = res.chars().rev().collect::<String>();
                     if let Some(_) = res.find('-') {
                         n = 1;
                     }
 
+                    let rev = res.chars().rev().collect::<String>();
                     for (i, v) in rev.as_bytes().iter().enumerate() {
                         if v == &b'.' || v == &b'-' {
                             continue;
                         }
 
-                        if rev.len()-1-n == i || rev.len()-1-n == i && v == &b'9' {
+                        if i == rev.len()-1-n {
                             let a = res.remove(0+n).to_digit(10).unwrap();
                             res.insert_str(0+n, &(a+1).to_string());
                             return res;
                         }
 
-                        let mut b: u32 = 0;
                         let a = rev[i..i+1].parse::<u32>().unwrap();
+                        let mut b: u32 = 0;
                         let nonum = rev[i+1..i+2].as_bytes();
-
                         if nonum != &[b'.'] && nonum != &[b'-'] {
                             b = rev[i+1..i+2].parse::<u32>().unwrap();
                         }
@@ -185,7 +180,6 @@ pub mod bignum {
         }
 
         pub fn run(&self) -> Result<Float, String> {
-
             let num = &self.numbers;
             let ope = &self.operator;
             let expr = &self.expression;
