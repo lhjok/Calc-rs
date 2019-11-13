@@ -1,5 +1,4 @@
-extern crate calc;
-use calc::Calculator;
+use calc::bignum::Calculator;
 use ansi_term::Colour::RGB;
 
 fn main() {
