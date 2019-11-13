@@ -88,12 +88,15 @@ pub mod bignum {
                 None => return fix,
                 Some(x) => {
 
+                    if x < 3 {
+                        return "Set Accuracy Greater Than 2".to_string();
+                    } else if let None = fix.find('.') {
+                        return fix;
+                    }
+
                     let mut dig: usize = 0;
                     let mut is: bool = false;
                     let mut res = String::new();
-                    if x < 3 {
-                        return "Set Accuracy Greater Than 2".to_string();
-                    }
 
                     for (i, v) in fix.as_bytes().iter().enumerate() {
                         if v == &b'.'{
@@ -101,11 +104,9 @@ pub mod bignum {
                             is = true;
                         }
                         dig += 1;
-                        if let None = fix.find('.') {
+                        if dig - 1 <= x && i == fix.len() {
                             return fix;
-                        } else if dig - 1 < x && fix.len() == i {
-                            return fix[..i].to_string();
-                        } else if is == true && dig - 1 == x && fix.len() > i {
+                        } else if is == true && dig - 1 == x && i < fix.len() {
                             let a = fix[i..i+1].parse::<u32>().unwrap();
                             let b = fix[i-1..i].parse::<u32>().unwrap();
                             let c = fix[i-2..i-1].parse::<u32>().unwrap();
