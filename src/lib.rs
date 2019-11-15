@@ -28,9 +28,33 @@ pub mod bignum {
             }
         }
 
+        fn clean_zero(src: String) -> String {
+            let mut find = false;
+            let (mut zero, mut dig) = (0, 0);
+            let mut res = src;
+            for (_, v) in res.as_bytes().iter().enumerate() {
+                dig += 1;
+                zero += 1;
+                if v == &b'.'{
+                    dig = 0;
+                    find = true;
+                }
+                if v != &b'0' {
+                    zero = 0;
+                }
+            }
+            if find == true {
+                if zero == dig {
+                    return res[..res.len()-dig-1].to_string();
+                }
+                res = res[..res.len()-zero].to_string();
+            }
+            res
+        }
+
         fn to_fixed(src: Float) -> String {
             let mut exp: i32 = 0;
-            let (mut zero, mut i_exp) = (0, 0);
+            let (mut zero, mut i_or_u) = (0, 0);
             let (mut temp, mut res) = (String::new(), String::new());
             let fix: String = src.to_string_radix(10, None);
 
@@ -51,40 +75,42 @@ pub mod bignum {
                 }
                 zero += 1;
                 if v != &b'0' { zero = 0; }
-                if exp < 0 && v == &b'-' { i_exp = 1; }
+                if exp < 0 && v == &b'-' { i_or_u = 1; }
                 if exp >= 0 && v == &b'-' { exp += 1; }
             }
 
             if exp < 0 {
                 exp = exp.abs();
                 for _ in 0..exp {
-                    res.insert(i_exp, '0');
+                    res.insert(i_or_u, '0');
                     exp -= 1;
                 }
-                if i_exp != 0 { exp += 1; }
+                if i_or_u != 0 {
+                    exp += 1;
+                }
             }
 
-            if exp == 0 && res.len() - zero <= 1 {
-                return res[..res.len() - zero].to_string();
-            } else if exp == 0 && res.len() - zero > 1 {
-                res = res[..res.len() - zero].to_string();
+            if exp == 0 && res.len()-zero <= 1 {
+                return res[..res.len()-zero].to_string();
+            } else if exp == 0 && res.len()-zero > 1 {
+                res = res[..res.len()-zero].to_string();
                 res.insert(1, '.');
                 return res;
             }
 
             let u_exp = exp as usize + 1;
             res.insert(u_exp, '.');
-            if u_exp >= res.len() - 1 - zero {
+            if u_exp >= res.len()-1-zero {
                 return res[..u_exp].to_string();
             }
-            res = res[..res.len() - zero].to_string();
+            res = res[..res.len()-zero].to_string();
             res
         }
 
         pub fn to_fixed_round(src: Float, digits: Option<usize>) -> String {
             let fix = Calculator::to_fixed(src);
             match digits {
-                None => return fix,
+                None => fix,
                 Some(x) => {
                     if let None = fix.find('.') {
                         return fix;
@@ -92,33 +118,33 @@ pub mod bignum {
                         return "Set Accuracy Greater Than 2".to_string();
                     }
                     let mut dig: usize = 0;
-                    let mut is: bool = false;
+                    let mut point: bool = false;
                     let mut res = String::new();
                     for (i, v) in fix.as_bytes().iter().enumerate() {
+                        dig += 1;
                         if v == &b'.'{
                             dig = 0;
-                            is = true;
+                            point = true;
                         }
-                        dig += 1;
-                        if dig - 1 <= x && i == fix.len() {
+                        if dig <= x && i == fix.len() {
                             return fix;
-                        } else if is == true && dig - 1 == x && i < fix.len() {
+                        } else if point == true && dig == x && i < fix.len() {
                             let a = fix[i..i+1].parse::<u32>().unwrap();
                             let b = fix[i-1..i].parse::<u32>().unwrap();
                             let c = fix[i-2..i-1].parse::<u32>().unwrap();
                             res = fix[..i].to_string();
                             if a < 5 {
-                                return res;
+                                return Calculator::clean_zero(res);
                             } else if a > 4 && b < 9 {
                                 res.pop();
                                 res.push(from_digit(b+1, 10).unwrap());
-                                return res;
+                                return Calculator::clean_zero(res);
                             } else if a > 4 && b == 9 && c < 9 {
                                 res.pop();
                                 res.push(from_digit(0, 10).unwrap());
                                 res.remove(res.len()-2);
                                 res.insert(res.len()-1, from_digit(c+1, 10).unwrap());
-                                return res;
+                                return Calculator::clean_zero(res);
                             }
                             break;
                         }
@@ -138,7 +164,7 @@ pub mod bignum {
                         if i == rev.len()-1-n {
                             let a = res.remove(0+n).to_digit(10).unwrap();
                             res.insert_str(0+n, &(a+1).to_string());
-                            return res;
+                            return Calculator::clean_zero(res);
                         }
 
                         let a = rev[i..i+1].parse::<u32>().unwrap();
@@ -154,11 +180,11 @@ pub mod bignum {
                             if b + 1 <= 9 && nonum != &[b'.'] && nonum != &[b'-'] {
                                 res.remove(res.len()-2-i);
                                 res.insert(res.len()-1-i, from_digit(b+1, 10).unwrap());
-                                return res;
+                                return Calculator::clean_zero(res);
                             }
                         }
                     }
-                    return fix;
+                    return Calculator::clean_zero(fix);
                 }
             }
         }
@@ -168,7 +194,7 @@ pub mod bignum {
                 b'+' | b'-' => 1,
                 b'*' | b'/' | b'%' => 2,
                 b'^' => 3,
-                _ => exit(0),
+                _ => exit(0)
             }
         }
 
@@ -203,13 +229,13 @@ pub mod bignum {
                     return Ok(value);
                 };
                 match x {
-                    b'+' => return accurate(c2 + c1),
-                    b'-' => return accurate(c2 - c1),
-                    b'*' => return accurate(c2 * c1),
-                    b'/' => return accurate(c2 / c1),
-                    b'%' => return accurate(Calculator::fmod(&c2, &c1)),
-                    b'^' => return accurate(c2.pow(c1)),
-                    _ => return Err("Error".to_string()),
+                    b'+' => accurate(c2 + c1),
+                    b'-' => accurate(c2 - c1),
+                    b'*' => accurate(c2 * c1),
+                    b'/' => accurate(c2 / c1),
+                    b'%' => accurate(Calculator::fmod(&c2, &c1)),
+                    b'^' => accurate(c2.pow(c1)),
+                    _ => Err("Error".to_string())
                 }
             };
 
@@ -220,9 +246,9 @@ pub mod bignum {
                         if max < value || min > value {
                             return Err("Beyond the precision range".to_string());
                         }
-                        return Ok(value);
+                        Ok(value)
                     }
-                    Err(_) => return Err("Invalid number".to_string()),
+                    Err(_) => Err("Invalid number".to_string())
                 }
             };
 
@@ -232,18 +258,18 @@ pub mod bignum {
                     return Err("Expression error".to_string());
                 }
                 match ch {
-                    b'A' => return Ok(value.abs()),
-                    b'c' => return Ok(value.cos()),
-                    b's' => return Ok(value.sin()),
-                    b't' => return Ok(value.tan()),
-                    b'C' => return Ok(value.cosh()),
-                    b'I' => return Ok(value.sinh()),
-                    b'T' => return Ok(value.tanh()),
-                    b'E' => return Ok(value.exp()),
-                    b'l' => return Ok(value.ln()),
-                    b'L' => return Ok(value.log2()),
-                    b'S' => return Ok(value.sqrt()),
-                    _ => return Err("Error".to_string()),
+                    b'A' => Ok(value.abs()),
+                    b'c' => Ok(value.cos()),
+                    b's' => Ok(value.sin()),
+                    b't' => Ok(value.tan()),
+                    b'C' => Ok(value.cosh()),
+                    b'I' => Ok(value.sinh()),
+                    b'T' => Ok(value.tanh()),
+                    b'E' => Ok(value.exp()),
+                    b'l' => Ok(value.ln()),
+                    b'L' => Ok(value.log2()),
+                    b'S' => Ok(value.sqrt()),
+                    _ => Err("Error".to_string())
                 }
             };
 
@@ -273,7 +299,7 @@ pub mod bignum {
                         if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
                             match intercept(locat, index) {
                                 Ok(value) => num.borrow_mut().push(value),
-                                Err(err) => return Err(err),
+                                Err(err) => return Err(err)
                             }
                             *self.sign.borrow_mut() = Sign::Data;
                         }
@@ -288,7 +314,7 @@ pub mod bignum {
                                         num.borrow_mut().push(res.unwrap());
                                         ope.borrow_mut().pop();
                                     }
-                                    Err(_) => return res,
+                                    Err(_) => return res
                                 }
                             } else {
                                 break;
@@ -320,7 +346,7 @@ pub mod bignum {
                             if vernier == b'A' {
                                 match intercept(locat, index) {
                                     Ok(value) => num.borrow_mut().push(value),
-                                    Err(err) => return Err(err),
+                                    Err(err) => return Err(err)
                                 }
                                 *self.sign.borrow_mut() = Sign::Data;
                             }
@@ -332,7 +358,7 @@ pub mod bignum {
                                     let res = computing(&ope.borrow_mut().pop().unwrap());
                                     match res {
                                         Ok(_) => num.borrow_mut().push(res.unwrap()),
-                                        Err(_) => return res,
+                                        Err(_) => return res
                                     }
                                 }
 
@@ -356,7 +382,7 @@ pub mod bignum {
                         if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
                             match intercept(locat, index) {
                                 Ok(value) => num.borrow_mut().push(value),
-                                Err(err) => return Err(err),
+                                Err(err) => return Err(err)
                             }
                             *self.sign.borrow_mut() = Sign::Data;
                         }
@@ -365,7 +391,7 @@ pub mod bignum {
                             let res = computing(&ope.borrow_mut().pop().unwrap());
                             match res {
                                 Ok(_) => num.borrow_mut().push(res.unwrap()),
-                                Err(_) => return res,
+                                Err(_) => return res
                             }
                         }
 
@@ -385,15 +411,15 @@ pub mod bignum {
                                         Ok(valid) => {
                                             match maths(ch, valid) {
                                                 Ok(value) => num.borrow_mut().push(value),
-                                                Err(err) => return Err(err),
+                                                Err(err) => return Err(err)
                                             }
                                         }
-                                        Err(err) => return Err(err),
+                                        Err(err) => return Err(err)
                                     }
                                 } else {
                                     match maths(ch, num.borrow_mut().pop().unwrap()) {
                                         Ok(value) => num.borrow_mut().push(value),
-                                        Err(err) => return Err(err),
+                                        Err(err) => return Err(err)
                                     }
                                 }
 
@@ -424,10 +450,17 @@ pub mod bignum {
                         }
                     }
 
-                    _ => return Err("Operator error".to_string()),
+                    _ => return Err("Operator error".to_string())
                 }
             }
             Err("Error".to_string())
+        }
+
+        pub fn run_round(&self ,digits: Option<usize>) -> Result<String, String> {
+            match self.run() {
+                Ok(value) => Ok(Calculator::to_fixed_round(value, digits)),
+                Err(err) => Err(err)
+            }
         }
     }
 }

@@ -7,11 +7,11 @@ fn main() {
         let mut expr = String::new();
         std::io::stdin().read_line(&mut expr).expect("Failed to read line");
         let test = Calculator::new(expr);
-        match test.run() {
+        match test.run_round(Some(5)) {
             Ok(value) => {
-                println!("{}", RGB(30, 144, 255).bold()
-                    .paint("=".to_owned() + &Calculator::to_fixed_round(value, Some(5))));
-                }
+                println!("{}", RGB(30, 144, 255)
+                    .bold().paint("=".to_owned() + &value));
+            }
             Err(msg) => println!("{}", RGB(255, 0, 0).paint(msg)),
         }
     }
