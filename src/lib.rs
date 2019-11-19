@@ -126,9 +126,9 @@ pub mod bignum {
                             dig = 0;
                             point = true;
                         }
-                        if dig <= x && i == fix.len() {
+                        if dig <= x && i == fix.len()-1 {
                             return fix;
-                        } else if point == true && dig == x && i < fix.len() {
+                        } else if point == true && dig == x && i < fix.len()-1 {
                             let a = fix[i..i+1].parse::<u32>().unwrap();
                             let b = fix[i-1..i].parse::<u32>().unwrap();
                             let c = fix[i-2..i-1].parse::<u32>().unwrap();
