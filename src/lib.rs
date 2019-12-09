@@ -404,8 +404,9 @@ pub mod bignum {
                                         }
                                         Err(err) => return Err(err)
                                     }
+                                } else {
+                                    return Err("Expression Error".to_string());
                                 }
-                                return Err("Expression Error".to_string());
                             } else {
                                 match maths(ch, num.borrow_mut().pop().unwrap()) {
                                     Ok(value) => num.borrow_mut().push(value),
