@@ -11,16 +11,16 @@ pub mod bignum {
         Char
     }
 
-    pub struct Calculator {
+    pub struct Calc {
         sign: RefCell<Sign>,
         numbers: RefCell<Vec<Float>>,
         operator: RefCell<Vec<u8>>,
         expression: String,
     }
 
-    impl Calculator {
+    impl Calc {
         pub fn new(expr: String) -> Self {
-            Calculator {
+            Calc {
                 sign: RefCell::new(Sign::Init),
                 numbers: RefCell::new(Vec::new()),
                 operator: RefCell::new(Vec::new()),
@@ -108,7 +108,7 @@ pub mod bignum {
         }
 
         pub fn to_fixed_round(src: Float, digits: Option<usize>) -> String {
-            let fix = Calculator::to_fixed(src);
+            let fix = Calc::to_fixed(src);
             match digits {
                 None => fix,
                 Some(x) => {
@@ -134,17 +134,17 @@ pub mod bignum {
                             let c = fix[i-2..i-1].parse::<u32>().unwrap();
                             res = fix[..i].to_string();
                             if a < 5 {
-                                return Calculator::clean_zero(res);
+                                return Calc::clean_zero(res);
                             } else if a > 4 && b < 9 {
                                 res.pop();
                                 res.push(from_digit(b+1, 10).unwrap());
-                                return Calculator::clean_zero(res);
+                                return Calc::clean_zero(res);
                             } else if a > 4 && b == 9 && c < 9 {
                                 res.pop();
                                 res.push(from_digit(0, 10).unwrap());
                                 res.remove(res.len()-2);
                                 res.insert(res.len()-1, from_digit(c+1, 10).unwrap());
-                                return Calculator::clean_zero(res);
+                                return Calc::clean_zero(res);
                             }
                             break;
                         }
@@ -164,7 +164,7 @@ pub mod bignum {
                         if i == rev.len()-1-n {
                             let a = res.remove(0+n).to_digit(10).unwrap();
                             res.insert_str(0+n, &(a+1).to_string());
-                            return Calculator::clean_zero(res);
+                            return Calc::clean_zero(res);
                         }
 
                         let a = rev[i..i+1].parse::<u32>().unwrap();
@@ -180,11 +180,11 @@ pub mod bignum {
                             if b + 1 <= 9 && nonum != &[b'.'] && nonum != &[b'-'] {
                                 res.remove(res.len()-2-i);
                                 res.insert(res.len()-1-i, from_digit(b+1, 10).unwrap());
-                                return Calculator::clean_zero(res);
+                                return Calc::clean_zero(res);
                             }
                         }
                     }
-                    return Calculator::clean_zero(fix);
+                    return Calc::clean_zero(fix);
                 }
             }
         }
@@ -200,8 +200,9 @@ pub mod bignum {
 
         fn fmod(x: &Float, n: &Float) -> Float {
             let m = Float::with_val(2560, x / n);
-            let res = if x < &0.0 { m.ceil() }
-            else { m.floor() };
+            let res = if x < &0.0 {
+                m.ceil()
+            } else { m.floor() };
             x - res * n
         }
 
@@ -209,9 +210,9 @@ pub mod bignum {
             let num = &self.numbers;
             let ope = &self.operator;
             let expr = &self.expression;
-            let mut locat: usize = 0; //切片定位
-            let mut bracket: u32 = 0; //括号标记
-            let mut vernier: u8 = b'0'; //移动游标
+            let mut locat: usize = 0;
+            let mut bracket: u32 = 0;
+            let mut vernier: u8 = b'I'; // I = Init, C = Char, N = Number, F = Function
             let pi = Float::with_val(128, Constant::Pi);
             let max = Float::with_val(2560, Float::parse("1e+768").unwrap());
             let min = Float::with_val(2560, Float::parse("-1e+768").unwrap());
@@ -219,23 +220,20 @@ pub mod bignum {
             let computing = |x: &u8| -> Result<Float, String> {
                 let c1 = num.borrow_mut().pop().unwrap();
                 let c2 = num.borrow_mut().pop().unwrap();
-                if x == &b'/' && c1 == 0.0 || x == &b'%' && c1 == 0.0 {
-                    return Err("Divide by zero".to_string());
-                }
                 let accurate = |value: Float| -> Result<Float, String> {
-                    if max < value || min > value {
-                        return Err("Beyond the precision range".to_string());
+                    if max > value && min < value {
+                        return Ok(value);
                     }
-                    return Ok(value);
+                    Err("Beyond The Precision Range".to_string())
                 };
                 match x {
                     b'+' => accurate(c2 + c1),
                     b'-' => accurate(c2 - c1),
                     b'*' => accurate(c2 * c1),
-                    b'/' => accurate(c2 / c1),
-                    b'%' => accurate(Calculator::fmod(&c2, &c1)),
+                    b'/' if c1 != 0.0 => accurate(c2 / c1),
+                    b'%' if c1 != 0.0 => accurate(Calc::fmod(&c2, &c1)),
                     b'^' => accurate(c2.pow(c1)),
-                    _ => Err("Error".to_string())
+                    _ => Err("Divide By Zero".to_string())
                 }
             };
 
@@ -243,20 +241,16 @@ pub mod bignum {
                 match Float::parse(&expr[n..i]) {
                     Ok(valid) => {
                         let value = Float::with_val(2560, valid);
-                        if max < value || min > value {
-                            return Err("Beyond the precision range".to_string());
+                        if max > value && min < value {
+                            return Ok(value);
                         }
-                        Ok(value)
+                        Err("Beyond The Precision Range".to_string())
                     }
-                    Err(_) => Err("Invalid number".to_string())
+                    Err(_) => Err("Invalid Number".to_string())
                 }
             };
 
             let maths = |ch: u8, value: Float| -> Result<Float, String> {
-                if ch == b'l' && value < 0.0 || ch == b'L'
-                   && value < 0.0 || ch == b'S' && value < 0.0 {
-                    return Err("Expression error".to_string());
-                }
                 match ch {
                     b'A' => Ok(value.abs()),
                     b'c' => Ok(value.cos()),
@@ -266,10 +260,10 @@ pub mod bignum {
                     b'I' => Ok(value.sinh()),
                     b'T' => Ok(value.tanh()),
                     b'E' => Ok(value.exp()),
-                    b'l' => Ok(value.ln()),
-                    b'L' => Ok(value.log2()),
-                    b'S' => Ok(value.sqrt()),
-                    _ => Err("Error".to_string())
+                    b'l' if value > 0.0 => Ok(value.ln()),
+                    b'L' if value > 0.0 => Ok(value.log2()),
+                    b'S' if value > 0.0 => Ok(value.sqrt()),
+                    _ => Err("Expression Error".to_string())
                 }
             };
 
@@ -277,23 +271,20 @@ pub mod bignum {
                 match value {
                     b'0'..=b'9' | b'.' => {
                         if vernier != b')' && vernier != b'F' {
-                            vernier = b'A';
+                            vernier = b'N';
                             continue;
                         }
-                        return Err("Expression error".to_string());
+                        return Err("Expression Error".to_string());
                     }
 
                     ch @ b'+' | ch @ b'-' | ch @ b'*' | ch @ b'/' | ch @ b'%' | ch @ b'^' => {
 
-                        let negative1 = ch == b'-' && vernier == b'(' && vernier != b'A';
-                        let negative2 = ch == b'-' && vernier != b')' && vernier != b'A'
-                            && vernier != b'F' && vernier != b'-';
-
-                        if negative1 == true || negative2 == true {
+                        if ch == b'-' && vernier == b'(' && vernier != b')'
+                           && vernier != b'F' && vernier != b'-' && vernier != b'N' {
                             vernier = b'-';
                             continue;
-                        } else if vernier != b'A' && vernier != b')' && vernier != b'F' {
-                            return Err("Expression error".to_string());
+                        } else if vernier != b'N' && vernier != b')' && vernier != b'F' {
+                            return Err("Expression Error".to_string());
                         }
 
                         if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
@@ -305,8 +296,8 @@ pub mod bignum {
                         }
 
                         while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
-                            let p1 = Calculator::priority(ope.borrow().last().unwrap());
-                            let p2 = Calculator::priority(&ch);
+                            let p1 = Calc::priority(ope.borrow().last().unwrap());
+                            let p2 = Calc::priority(&ch);
                             if p1 >= p2 {
                                 let res = computing(ope.borrow().last().unwrap());
                                 match res {
@@ -324,13 +315,13 @@ pub mod bignum {
                         ope.borrow_mut().push(ch);
                         *self.sign.borrow_mut() = Sign::Char;
                         locat = index + 1;
-                        vernier = b'B';
+                        vernier = b'C';
                         continue;
                     }
 
                     ch @ b'(' => {
                         if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
-                            if vernier != b'A' && vernier != b'-' {
+                            if vernier != b'N' && vernier != b'-' {
                                 ope.borrow_mut().push(ch);
                                 locat = index + 1;
                                 bracket = bracket + 1;
@@ -338,12 +329,12 @@ pub mod bignum {
                                 continue;
                             }
                         }
-                        return Err("Expression error".to_string());
+                        return Err("Expression Error".to_string());
                     }
 
                     b')' => {
                         if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
-                            if vernier == b'A' {
+                            if vernier == b'N' {
                                 match intercept(locat, index) {
                                     Ok(value) => num.borrow_mut().push(value),
                                     Err(err) => return Err(err)
@@ -369,14 +360,14 @@ pub mod bignum {
                                 continue;
                             }
                         }
-                        return Err("Expression error".to_string());
+                        return Err("Expression Error".to_string());
                     }
 
                     b'=' | b'\n' | b'\r' => {
-                        if vernier == b'0' {
-                            return Err("Empty expression".to_string());
-                        } else if bracket > 0 || vernier == b'-' || vernier == b'B' {
-                            return Err("Expression error".to_string());
+                        if vernier == b'I' {
+                            return Err("Empty Expression".to_string());
+                        } else if bracket > 0 || vernier == b'-' || vernier == b'C' {
+                            return Err("Expression Error".to_string());
                         }
 
                         if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
@@ -399,14 +390,11 @@ pub mod bignum {
                         return Ok(res);
                     }
 
-                    ch @ b'A' | ch @ b'S' | ch @ b'c' | ch @ b's' | ch @ b't' | ch @ b'C'
-                    | ch @ b'I' | ch @ b'T' | ch @ b'l' | ch @ b'L' | ch @ b'E' =>
-                    {
-                        if let Sign::Char | Sign::Init = self.sign.clone().into_inner()
-                        {
-                            if vernier != b'B' && vernier != 0 || vernier == b'F' || vernier == b')'
-                            {
-                                if vernier != b'F' && vernier != b')' {
+                    ch @ b'A' | ch @ b'S' | ch @ b'c' | ch @ b's' | ch @ b't' | ch @ b'C' |
+                    ch @ b'I' | ch @ b'T' | ch @ b'l' | ch @ b'L' | ch @ b'E' => {
+                        if vernier != b'C' && vernier != b'I' && vernier != b'(' {
+                            if vernier != b'F' && vernier != b')' {
+                                if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
                                     match intercept(locat, index) {
                                         Ok(valid) => {
                                             match maths(ch, valid) {
@@ -416,25 +404,26 @@ pub mod bignum {
                                         }
                                         Err(err) => return Err(err)
                                     }
-                                } else {
-                                    match maths(ch, num.borrow_mut().pop().unwrap()) {
-                                        Ok(value) => num.borrow_mut().push(value),
-                                        Err(err) => return Err(err)
-                                    }
                                 }
-
-                                *self.sign.borrow_mut() = Sign::Data;
-                                locat = index + 1;
-                                vernier = b'F';
-                                continue;
+                                return Err("Expression Error".to_string());
+                            } else {
+                                match maths(ch, num.borrow_mut().pop().unwrap()) {
+                                    Ok(value) => num.borrow_mut().push(value),
+                                    Err(err) => return Err(err)
+                                }
                             }
+
+                            *self.sign.borrow_mut() = Sign::Data;
+                            locat = index + 1;
+                            vernier = b'F';
+                            continue;
                         }
-                        return Err("Expression error".to_string());
+                        return Err("Expression Error".to_string());
                     }
 
                     b'P' => {
                         if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
-                            if vernier != b'A' {
+                            if vernier != b'N' {
                                 let pi2 = if vernier == b'-' {
                                     Float::with_val(128, 0.0 - &pi)
                                 } else {
@@ -446,19 +435,19 @@ pub mod bignum {
                                 vernier = b'F';
                                 continue;
                             }
-                            return Err("Expression error".to_string());
                         }
+                        return Err("Expression Error".to_string());
                     }
 
-                    _ => return Err("Operator error".to_string())
+                    _ => return Err("Operator Error".to_string())
                 }
             }
-            Err("Error".to_string())
+            Err("No Terminator".to_string())
         }
 
         pub fn run_round(&self ,digits: Option<usize>) -> Result<String, String> {
             match self.run() {
-                Ok(value) => Ok(Calculator::to_fixed_round(value, digits)),
+                Ok(value) => Ok(Calc::to_fixed_round(value, digits)),
                 Err(err) => Err(err)
             }
         }
