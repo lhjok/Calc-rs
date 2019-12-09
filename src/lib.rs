@@ -279,7 +279,7 @@ pub mod bignum {
 
                     ch @ b'+' | ch @ b'-' | ch @ b'*' | ch @ b'/' | ch @ b'%' | ch @ b'^' => {
 
-                        if ch == b'-' && vernier == b'(' && vernier != b')'
+                        if ch == b'-' && vernier == b'(' || ch == b'-' && vernier != b')'
                            && vernier != b'F' && vernier != b'-' && vernier != b'N' {
                             vernier = b'-';
                             continue;
