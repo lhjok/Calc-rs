@@ -408,7 +408,8 @@ pub mod bignum {
                                     return Err("Expression Error".to_string());
                                 }
                             } else {
-                                match maths(ch, num.borrow_mut().pop().unwrap()) {
+                                let valid = num.borrow_mut().pop().unwrap();
+                                match maths(ch, valid) {
                                     Ok(value) => num.borrow_mut().push(value),
                                     Err(err) => return Err(err)
                                 }
