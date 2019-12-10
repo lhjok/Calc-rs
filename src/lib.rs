@@ -217,15 +217,16 @@ pub mod bignum {
             let max = Float::with_val(2560, Float::parse("1e+768").unwrap());
             let min = Float::with_val(2560, Float::parse("-1e+768").unwrap());
 
+            let accurate = |value: Float| -> Result<Float, String> {
+                if max > value && min < value {
+                    return Ok(value);
+                }
+                Err("Beyond The Precision Range".to_string())
+            };
+
             let computing = |x: &u8| -> Result<Float, String> {
                 let c1 = num.borrow_mut().pop().unwrap();
                 let c2 = num.borrow_mut().pop().unwrap();
-                let accurate = |value: Float| -> Result<Float, String> {
-                    if max > value && min < value {
-                        return Ok(value);
-                    }
-                    Err("Beyond The Precision Range".to_string())
-                };
                 match x {
                     b'+' => accurate(c2 + c1),
                     b'-' => accurate(c2 - c1),
@@ -239,30 +240,24 @@ pub mod bignum {
 
             let intercept = |n: usize, i: usize| -> Result<Float, String> {
                 match Float::parse(&expr[n..i]) {
-                    Ok(valid) => {
-                        let value = Float::with_val(2560, valid);
-                        if max > value && min < value {
-                            return Ok(value);
-                        }
-                        Err("Beyond The Precision Range".to_string())
-                    }
+                    Ok(valid) => accurate(Float::with_val(2560, valid)),
                     Err(_) => Err("Invalid Number".to_string())
                 }
             };
 
             let maths = |ch: u8, value: Float| -> Result<Float, String> {
                 match ch {
-                    b'A' => Ok(value.abs()),
-                    b'c' => Ok(value.cos()),
-                    b's' => Ok(value.sin()),
-                    b't' => Ok(value.tan()),
-                    b'C' => Ok(value.cosh()),
-                    b'I' => Ok(value.sinh()),
-                    b'T' => Ok(value.tanh()),
-                    b'E' => Ok(value.exp()),
-                    b'l' if value > 0.0 => Ok(value.ln()),
-                    b'L' if value > 0.0 => Ok(value.log2()),
-                    b'S' if value > 0.0 => Ok(value.sqrt()),
+                    b'A' => accurate(value.abs()),
+                    b'c' => accurate(value.cos()),
+                    b's' => accurate(value.sin()),
+                    b't' => accurate(value.tan()),
+                    b'C' => accurate(value.cosh()),
+                    b'I' => accurate(value.sinh()),
+                    b'T' => accurate(value.tanh()),
+                    b'E' => accurate(value.exp()),
+                    b'l' if value > 0.0 => accurate(value.ln()),
+                    b'L' if value > 0.0 => accurate(value.log2()),
+                    b'S' if value > 0.0 => accurate(value.sqrt()),
                     _ => Err("Expression Error".to_string())
                 }
             };
