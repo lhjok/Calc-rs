@@ -256,7 +256,7 @@ pub mod bignum {
                     b'T' => accurate(value.tanh()),
                     b'E' => accurate(value.exp()),
                     b'l' if value > 0.0 => accurate(value.ln()),
-                    b'L' if value >= 0.0 => accurate(value.log2()),
+                    b'L' if value > 0.0 => accurate(value.log2()),
                     b'S' if value >= 0.0 => accurate(value.sqrt()),
                     _ => Err("Expression Error".to_string())
                 }
