@@ -262,8 +262,8 @@ pub mod bignum {
                 }
             };
 
-            for (index, &value) in expr.as_bytes().iter().enumerate() {
-                match value {
+            for (index, &valid) in expr.as_bytes().iter().enumerate() {
+                match valid {
                     b'0'..=b'9' | b'.' => {
                         if vernier != b')' && vernier != b'F' {
                             vernier = b'N';
