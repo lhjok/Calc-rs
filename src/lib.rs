@@ -386,20 +386,17 @@ pub mod bignum {
 
                     ch @ b'A' | ch @ b'S' | ch @ b'c' | ch @ b's' | ch @ b't' | ch @ b'C' |
                     ch @ b'I' | ch @ b'T' | ch @ b'l' | ch @ b'L' | ch @ b'E' => {
-                        if vernier != b'C' && vernier != b'I' && vernier != b'(' {
-                            if vernier != b'F' && vernier != b')' {
-                                if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
-                                    match intercept(locat, index) {
-                                        Ok(valid) => {
-                                            match maths(ch, valid) {
-                                                Ok(value) => num.borrow_mut().push(value),
-                                                Err(err) => return Err(err)
-                                            }
+                        if vernier == b'N' || vernier == b'F' || vernier == b')' {
+                            if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                                match intercept(locat, index) {
+                                    Ok(valid) => {
+                                        match maths(ch, valid) {
+                                            Ok(value) => num.borrow_mut().push(value),
+                                            Err(err) => return Err(err)
                                         }
-                                        Err(err) => return Err(err)
+                                        *self.sign.borrow_mut() = Sign::Data;
                                     }
-                                } else {
-                                    return Err("Expression Error".to_string());
+                                    Err(err) => return Err(err)
                                 }
                             } else {
                                 let valid = num.borrow_mut().pop().unwrap();
@@ -409,7 +406,6 @@ pub mod bignum {
                                 }
                             }
 
-                            *self.sign.borrow_mut() = Sign::Data;
                             locat = index + 1;
                             vernier = b'F';
                             continue;
