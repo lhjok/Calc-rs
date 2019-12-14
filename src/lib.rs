@@ -90,7 +90,7 @@ pub mod bignum {
                 }
             }
 
-            if exp == 0 && res.len()-zero <= 1 {
+            if exp == 0 && res.len()-zero == 1 {
                 return res[..res.len()-zero].to_string();
             } else if exp == 0 && res.len()-zero > 1 {
                 res = res[..res.len()-zero].to_string();
@@ -103,8 +103,7 @@ pub mod bignum {
             if u_exp >= res.len()-1-zero {
                 return res[..u_exp].to_string();
             }
-            res = res[..res.len()-zero].to_string();
-            res
+            res[..res.len()-zero].to_string()
         }
 
         pub fn to_fixed_round(src: Float, digits: Option<usize>) -> String {
@@ -138,13 +137,12 @@ pub mod bignum {
                             } else if a > 4 && b < 9 {
                                 res.pop();
                                 res.push(from_digit(b+1, 10).unwrap());
-                                return Calc::clean_zero(res);
+                                return res;
                             } else if a > 4 && b == 9 && c < 9 {
                                 res.pop();
-                                res.push(from_digit(0, 10).unwrap());
-                                res.remove(res.len()-2);
-                                res.insert(res.len()-1, from_digit(c+1, 10).unwrap());
-                                return Calc::clean_zero(res);
+                                res.pop();
+                                res.push(from_digit(c+1, 10).unwrap());
+                                return res;
                             }
                             break;
                         }
@@ -184,7 +182,7 @@ pub mod bignum {
                             }
                         }
                     }
-                    return Calc::clean_zero(fix);
+                    exit(0)
                 }
             }
         }
