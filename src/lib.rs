@@ -250,28 +250,28 @@ pub mod bignum {
                 }
             };
 
-            let maths = |func: String, value: Float| -> Result<Float, String> {
-                match func {
-                    _ if func == "abs" => accurate(value.abs()),
-                    _ if func == "cos" => accurate(value.cos()),
-                    _ if func == "sin" => accurate(value.sin()),
-                    _ if func == "tan" => accurate(value.tan()),
-                    _ if func == "sec" => accurate(value.sec()),
-                    _ if func == "acos" => accurate(value.acos()),
-                    _ if func == "asin" => accurate(value.asin()),
-                    _ if func == "atan" => accurate(value.atan()),
-                    _ if func == "cosh" => accurate(value.cosh()),
-                    _ if func == "sinh" => accurate(value.sinh()),
-                    _ if func == "tanh" => accurate(value.tanh()),
-                    _ if func == "sech" => accurate(value.sech()),
-                    _ if func == "acosh" => accurate(value.acosh()),
-                    _ if func == "asinh" => accurate(value.asinh()),
-                    _ if func == "atanh" => accurate(value.atanh()),
-                    _ if func == "exp" => accurate(value.exp()),
-                    _ if func == "ln" && value > 0.0 => accurate(value.ln()),
-                    _ if func == "log" && value > 0.0 => accurate(value.log2()),
-                    _ if func == "logx" && value > 0.0 => accurate(value.log10()),
-                    _ if func == "sqrt" && value >= 0.0 => accurate(value.sqrt()),
+            let maths = |n: String, v: Float| -> Result<Float, String> {
+                match n {
+                    _ if n == "abs" => accurate(v.abs()),
+                    _ if n == "cos" => accurate(v.cos()),
+                    _ if n == "sin" => accurate(v.sin()),
+                    _ if n == "tan" => accurate(v.tan()),
+                    _ if n == "sec" => accurate(v.sec()),
+                    _ if n == "atan" => accurate(v.atan()),
+                    _ if n == "cosh" => accurate(v.cosh()),
+                    _ if n == "sinh" => accurate(v.sinh()),
+                    _ if n == "tanh" => accurate(v.tanh()),
+                    _ if n == "sech" => accurate(v.sech()),
+                    _ if n == "asinh" => accurate(v.asinh()),
+                    _ if n == "exp" => accurate(v.exp()),
+                    _ if n == "ln" && v > 0.0 => accurate(v.ln()),
+                    _ if n == "log" && v > 0.0 => accurate(v.log2()),
+                    _ if n == "logx" && v > 0.0 => accurate(v.log10()),
+                    _ if n == "acosh" && v >= 1.0 => accurate(v.acosh()),
+                    _ if n == "sqrt" && v >= 0.0 => accurate(v.sqrt()),
+                    _ if n == "acos" && v >= -1.0 && v <= 1.0 => accurate(v.acos()),
+                    _ if n == "asin" && v >= -1.0 && v <= 1.0 => accurate(v.asin()),
+                    _ if n == "atanh" && v > -1.0 && v < 1.0 => accurate(v.atanh()),
                     _ => Err("Expression Error".to_string())
                 }
             };
