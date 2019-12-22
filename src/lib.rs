@@ -2,6 +2,7 @@ pub mod bignum {
     use rug::ops::Pow;
     use rug::{float::Constant, Float};
     use std::{char::from_digit, cell::RefCell};
+    use std::collections::HashMap;
     use std::process::exit;
 
     #[derive(Clone)]
@@ -15,6 +16,7 @@ pub mod bignum {
         sign: RefCell<Sign>,
         numbers: RefCell<Vec<Float>>,
         operator: RefCell<Vec<u8>>,
+        func: RefCell<HashMap<u32, String>>,
         expression: String,
     }
 
@@ -24,6 +26,7 @@ pub mod bignum {
                 sign: RefCell::new(Sign::Init),
                 numbers: RefCell::new(Vec::new()),
                 operator: RefCell::new(Vec::new()),
+                func: RefCell::new(HashMap::new()),
                 expression: expr + "=",
             }
         }
@@ -208,10 +211,14 @@ pub mod bignum {
             let num = &self.numbers;
             let ope = &self.operator;
             let expr = &self.expression;
+            let sign = &self.sign;
+            let func = &self.func;
             let mut locat: usize = 0;
             let mut bracket: u32 = 0;
-            let mut vernier: u8 = b'I'; // I = Init, C = Char, N = Number, F = Function
+            let mut vernier: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
             let pi = Float::with_val(128, Constant::Pi);
+            let funcs = ["abs","cos","sin","tan","sec","cosh","sinh","tanh","sech",
+                "acos","asin","atan","acosh","asinh","atanh","exp","ln","log","logx","sqrt"];
             let max = Float::with_val(2560, Float::parse("1e+768").unwrap());
             let min = Float::with_val(2560, Float::parse("-1e+768").unwrap());
 
@@ -243,19 +250,28 @@ pub mod bignum {
                 }
             };
 
-            let maths = |ch: u8, value: Float| -> Result<Float, String> {
-                match ch {
-                    b'A' => accurate(value.abs()),
-                    b'c' => accurate(value.cos()),
-                    b's' => accurate(value.sin()),
-                    b't' => accurate(value.tan()),
-                    b'C' => accurate(value.cosh()),
-                    b'I' => accurate(value.sinh()),
-                    b'T' => accurate(value.tanh()),
-                    b'E' => accurate(value.exp()),
-                    b'l' if value > 0.0 => accurate(value.ln()),
-                    b'L' if value > 0.0 => accurate(value.log2()),
-                    b'S' if value >= 0.0 => accurate(value.sqrt()),
+            let maths = |func: String, value: Float| -> Result<Float, String> {
+                match func {
+                    _ if func == "abs" => accurate(value.abs()),
+                    _ if func == "cos" => accurate(value.cos()),
+                    _ if func == "sin" => accurate(value.sin()),
+                    _ if func == "tan" => accurate(value.tan()),
+                    _ if func == "sec" => accurate(value.sec()),
+                    _ if func == "acos" => accurate(value.acos()),
+                    _ if func == "asin" => accurate(value.asin()),
+                    _ if func == "atan" => accurate(value.atan()),
+                    _ if func == "cosh" => accurate(value.cosh()),
+                    _ if func == "sinh" => accurate(value.sinh()),
+                    _ if func == "tanh" => accurate(value.tanh()),
+                    _ if func == "sech" => accurate(value.sech()),
+                    _ if func == "acosh" => accurate(value.acosh()),
+                    _ if func == "asinh" => accurate(value.asinh()),
+                    _ if func == "atanh" => accurate(value.atanh()),
+                    _ if func == "exp" => accurate(value.exp()),
+                    _ if func == "ln" && value > 0.0 => accurate(value.ln()),
+                    _ if func == "log" && value > 0.0 => accurate(value.log2()),
+                    _ if func == "logx" && value > 0.0 => accurate(value.log10()),
+                    _ if func == "sqrt" && value >= 0.0 => accurate(value.sqrt()),
                     _ => Err("Expression Error".to_string())
                 }
             };
@@ -263,8 +279,17 @@ pub mod bignum {
             for (index, &valid) in expr.as_bytes().iter().enumerate() {
                 match valid {
                     b'0'..=b'9' | b'.' => {
-                        if vernier != b')' && vernier != b'F' {
+                        if vernier != b')' && vernier != b'P' {
                             vernier = b'N';
+                            continue;
+                        }
+                        return Err("Expression Error".to_string());
+                    }
+
+                    b'a'..=b'z' => {
+                        if vernier != b')' && vernier != b'P'
+                           && vernier != b'-' && vernier != b'N' {
+                            vernier = b'F';
                             continue;
                         }
                         return Err("Expression Error".to_string());
@@ -272,19 +297,19 @@ pub mod bignum {
 
                     ch @ b'+' | ch @ b'-' | ch @ b'*' | ch @ b'/' | ch @ b'%' | ch @ b'^' => {
                         if ch == b'-' && vernier == b'(' || ch == b'-' && vernier != b')'
-                           && vernier != b'F' && vernier != b'-' && vernier != b'N' {
+                           && vernier != b'P' && vernier != b'-' && vernier != b'N' {
                             vernier = b'-';
                             continue;
-                        } else if vernier != b'N' && vernier != b')' && vernier != b'F' {
+                        } else if vernier != b'N' && vernier != b')' && vernier != b'P' {
                             return Err("Expression Error".to_string());
                         }
 
-                        if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                             match intercept(locat, index) {
                                 Ok(value) => num.borrow_mut().push(value),
                                 Err(err) => return Err(err)
                             }
-                            *self.sign.borrow_mut() = Sign::Data;
+                            *sign.borrow_mut() = Sign::Data;
                         }
 
                         while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
@@ -303,14 +328,28 @@ pub mod bignum {
                         }
 
                         ope.borrow_mut().push(ch);
-                        *self.sign.borrow_mut() = Sign::Char;
+                        *sign.borrow_mut() = Sign::Char;
                         locat = index + 1;
                         vernier = b'C';
                         continue;
                     }
 
                     ch @ b'(' => {
-                        if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        if vernier == b'F' {
+                            let mut is_fun: bool = false;
+                            let fun = expr[locat..index].to_string();
+                            for var in funcs.iter() {
+                                if var == &fun {
+                                    func.borrow_mut().insert(bracket+1, fun.clone());
+                                    is_fun = true;
+                                }
+                            }
+                            if is_fun == false {
+                                return Err("Expression Error".to_string());
+                            }
+                        }
+
+                        if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                             if vernier != b'N' && vernier != b'-' {
                                 ope.borrow_mut().push(ch);
                                 locat = index + 1;
@@ -323,21 +362,29 @@ pub mod bignum {
                     }
 
                     b')' => {
-                        if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                             if vernier == b'N' {
                                 match intercept(locat, index) {
                                     Ok(value) => num.borrow_mut().push(value),
                                     Err(err) => return Err(err)
                                 }
-                                *self.sign.borrow_mut() = Sign::Data;
+                                *sign.borrow_mut() = Sign::Data;
                             }
                         }
 
-                        if let Sign::Data = self.sign.clone().into_inner() {
+                        if let Sign::Data = sign.clone().into_inner() {
                             if bracket > 0 {
                                 while ope.borrow().last().unwrap() != &b'(' {
                                     let valid = computing(&ope.borrow_mut().pop().unwrap());
                                     match valid {
+                                        Ok(value) => num.borrow_mut().push(value),
+                                        Err(err) => return Err(err)
+                                    }
+                                }
+
+                                if let Some(fun_name) = func.borrow_mut().remove(&bracket) {
+                                    let valid = num.borrow_mut().pop().unwrap();
+                                    match maths(fun_name, valid) {
                                         Ok(value) => num.borrow_mut().push(value),
                                         Err(err) => return Err(err)
                                     }
@@ -360,12 +407,12 @@ pub mod bignum {
                             return Err("Expression Error".to_string());
                         }
 
-                        if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                             match intercept(locat, index) {
                                 Ok(value) => num.borrow_mut().push(value),
                                 Err(err) => return Err(err)
                             }
-                            *self.sign.borrow_mut() = Sign::Data;
+                            *sign.borrow_mut() = Sign::Data;
                         }
 
                         while ope.borrow().len() != 0 {
@@ -375,42 +422,12 @@ pub mod bignum {
                                 Err(err) => return Err(err)
                             }
                         }
-
                         let res = num.borrow_mut().pop().unwrap();
                         return Ok(res);
                     }
 
-                    ch @ b'A' | ch @ b'S' | ch @ b'c' | ch @ b's' | ch @ b't' | ch @ b'C' |
-                    ch @ b'I' | ch @ b'T' | ch @ b'l' | ch @ b'L' | ch @ b'E' => {
-                        if vernier == b'N' || vernier == b'F' || vernier == b')' {
-                            if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
-                                match intercept(locat, index) {
-                                    Ok(valid) => {
-                                        match maths(ch, valid) {
-                                            Ok(value) => num.borrow_mut().push(value),
-                                            Err(err) => return Err(err)
-                                        }
-                                        *self.sign.borrow_mut() = Sign::Data;
-                                    }
-                                    Err(err) => return Err(err)
-                                }
-                            } else {
-                                let valid = num.borrow_mut().pop().unwrap();
-                                match maths(ch, valid) {
-                                    Ok(value) => num.borrow_mut().push(value),
-                                    Err(err) => return Err(err)
-                                }
-                            }
-
-                            locat = index + 1;
-                            vernier = b'F';
-                            continue;
-                        }
-                        return Err("Expression Error".to_string());
-                    }
-
                     b'P' => {
-                        if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                             if vernier != b'N' {
                                 let pi2 = if vernier == b'-' {
                                     Float::with_val(128, 0.0 - &pi)
@@ -418,9 +435,9 @@ pub mod bignum {
                                     Float::with_val(128, &pi)
                                 };
                                 num.borrow_mut().push(pi2);
-                                *self.sign.borrow_mut() = Sign::Data;
+                                *sign.borrow_mut() = Sign::Data;
                                 locat = index + 1;
-                                vernier = b'F';
+                                vernier = b'P';
                                 continue;
                             }
                         }
