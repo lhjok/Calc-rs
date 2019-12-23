@@ -35,7 +35,7 @@ pub mod bignum {
             let mut find = false;
             let (mut zero, mut dig) = (0, 0);
             let mut res = src;
-            for (_, v) in res.as_bytes().iter().enumerate() {
+            for v in res.as_bytes().iter() {
                 dig += 1;
                 zero += 1;
                 if v == &b'.'{
@@ -213,6 +213,7 @@ pub mod bignum {
             let expr = &self.expression;
             let sign = &self.sign;
             let func = &self.func;
+
             let mut locat: usize = 0;
             let mut bracket: u32 = 0;
             let mut vernier: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
@@ -336,15 +337,16 @@ pub mod bignum {
 
                     ch @ b'(' => {
                         if vernier == b'F' {
-                            let mut is_fun: bool = false;
-                            let fun = expr[locat..index].to_string();
-                            for var in funcs.iter() {
-                                if var == &fun {
-                                    func.borrow_mut().insert(bracket+1, fun.clone());
-                                    is_fun = true;
+                            let mut find: bool = false;
+                            let valid = expr[locat..index].to_string();
+                            for value in funcs.iter() {
+                                if value == &valid {
+                                    func.borrow_mut().insert(bracket+1, valid.clone());
+                                    find = true;
+                                    break;
                                 }
                             }
-                            if is_fun == false {
+                            if find == false {
                                 return Err("Expression Error".to_string());
                             }
                         }
