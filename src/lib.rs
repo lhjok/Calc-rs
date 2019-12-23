@@ -213,10 +213,9 @@ pub mod bignum {
             let expr = &self.expression;
             let sign = &self.sign;
             let func = &self.func;
-
             let mut locat: usize = 0;
             let mut bracket: u32 = 0;
-            let mut vernier: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
+            let mut mark: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
             let pi = Float::with_val(128, Constant::Pi);
             let funcs = ["abs","cos","sin","tan","sec","cosh","sinh","tanh","sech",
                 "acos","asin","atan","acosh","asinh","atanh","exp","ln","log","logx","sqrt"];
@@ -280,28 +279,27 @@ pub mod bignum {
             for (index, &valid) in expr.as_bytes().iter().enumerate() {
                 match valid {
                     b'0'..=b'9' | b'.' => {
-                        if vernier != b')' && vernier != b'P' {
-                            vernier = b'N';
+                        if mark != b')' && mark != b'P' && mark != b'F' {
+                            mark = b'N';
                             continue;
                         }
                         return Err("Expression Error".to_string());
                     }
 
                     b'a'..=b'z' => {
-                        if vernier != b')' && vernier != b'P'
-                           && vernier != b'-' && vernier != b'N' {
-                            vernier = b'F';
+                        if mark != b')' && mark != b'P' && mark != b'-' && mark != b'N' {
+                            mark = b'F';
                             continue;
                         }
                         return Err("Expression Error".to_string());
                     }
 
                     ch @ b'+' | ch @ b'-' | ch @ b'*' | ch @ b'/' | ch @ b'%' | ch @ b'^' => {
-                        if ch == b'-' && vernier == b'(' || ch == b'-' && vernier != b')'
-                           && vernier != b'P' && vernier != b'-' && vernier != b'N' {
-                            vernier = b'-';
+                        if ch == b'-' && mark == b'(' || ch == b'-' && mark != b')'
+                           && mark != b'P' && mark != b'-' && mark != b'N' {
+                            mark = b'-';
                             continue;
-                        } else if vernier != b'N' && vernier != b')' && vernier != b'P' {
+                        } else if mark != b'N' && mark != b')' && mark != b'P' {
                             return Err("Expression Error".to_string());
                         }
 
@@ -331,12 +329,12 @@ pub mod bignum {
                         ope.borrow_mut().push(ch);
                         *sign.borrow_mut() = Sign::Char;
                         locat = index + 1;
-                        vernier = b'C';
+                        mark = b'C';
                         continue;
                     }
 
                     ch @ b'(' => {
-                        if vernier == b'F' {
+                        if mark == b'F' {
                             let mut find: bool = false;
                             let valid = expr[locat..index].to_string();
                             for value in funcs.iter() {
@@ -352,11 +350,11 @@ pub mod bignum {
                         }
 
                         if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                            if vernier != b'N' && vernier != b'-' {
+                            if mark != b'N' && mark != b'-' {
                                 ope.borrow_mut().push(ch);
                                 locat = index + 1;
                                 bracket = bracket + 1;
-                                vernier = b'(';
+                                mark = b'(';
                                 continue;
                             }
                         }
@@ -365,7 +363,7 @@ pub mod bignum {
 
                     b')' => {
                         if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                            if vernier == b'N' {
+                            if mark == b'N' {
                                 match intercept(locat, index) {
                                     Ok(value) => num.borrow_mut().push(value),
                                     Err(err) => return Err(err)
@@ -395,7 +393,7 @@ pub mod bignum {
                                 ope.borrow_mut().pop();
                                 locat = index + 1;
                                 bracket = bracket - 1;
-                                vernier = b')';
+                                mark = b')';
                                 continue;
                             }
                         }
@@ -403,9 +401,9 @@ pub mod bignum {
                     }
 
                     b'=' | b'\n' | b'\r' => {
-                        if vernier == b'I' {
+                        if mark == b'I' {
                             return Err("Empty Expression".to_string());
-                        } else if bracket > 0 || vernier == b'-' || vernier == b'C' {
+                        } else if bracket > 0 || mark == b'-' || mark == b'C' {
                             return Err("Expression Error".to_string());
                         }
 
@@ -430,8 +428,8 @@ pub mod bignum {
 
                     b'P' => {
                         if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                            if vernier != b'N' {
-                                let pi2 = if vernier == b'-' {
+                            if mark != b'N' {
+                                let pi2 = if mark == b'-' {
                                     Float::with_val(128, 0.0 - &pi)
                                 } else {
                                     Float::with_val(128, &pi)
@@ -439,7 +437,7 @@ pub mod bignum {
                                 num.borrow_mut().push(pi2);
                                 *sign.borrow_mut() = Sign::Data;
                                 locat = index + 1;
-                                vernier = b'P';
+                                mark = b'P';
                                 continue;
                             }
                         }
