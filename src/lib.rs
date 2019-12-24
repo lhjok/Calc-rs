@@ -295,8 +295,8 @@ pub mod bignum {
                     }
 
                     ch @ b'+' | ch @ b'-' | ch @ b'*' | ch @ b'/' | ch @ b'%' | ch @ b'^' => {
-                        if ch == b'-' && mark == b'(' || ch == b'-' && mark != b')'
-                           && mark != b'P' && mark != b'-' && mark != b'N' {
+                        let nega: bool = mark == b'I' || mark == b'(' || mark == b'C';
+                        if ch == b'-' && nega == true {
                             mark = b'-';
                             continue;
                         } else if mark != b'N' && mark != b')' && mark != b'P' {
@@ -403,7 +403,7 @@ pub mod bignum {
                     b'=' | b'\n' | b'\r' => {
                         if mark == b'I' {
                             return Err("Empty Expression".to_string());
-                        } else if bracket > 0 || mark == b'-' || mark == b'C' {
+                        } else if bracket > 0 || mark == b'-' || mark == b'C' || mark == b'F' {
                             return Err("Expression Error".to_string());
                         }
 
@@ -428,7 +428,7 @@ pub mod bignum {
 
                     b'P' => {
                         if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                            if mark != b'N' {
+                            if mark != b'N' && mark != b'F' {
                                 let pi2 = if mark == b'-' {
                                     Float::with_val(128, 0.0 - &pi)
                                 } else {
