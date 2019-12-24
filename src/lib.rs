@@ -32,7 +32,7 @@ pub mod bignum {
         }
 
         fn clean_zero(src: String) -> String {
-            let mut find = false;
+            let mut find: bool = false;
             let (mut zero, mut dig) = (0, 0);
             let mut res = src;
             for v in res.as_bytes().iter() {
@@ -208,10 +208,10 @@ pub mod bignum {
         }
 
         pub fn run(&self) -> Result<Float, String> {
+            let sign = &self.sign;
             let num = &self.numbers;
             let ope = &self.operator;
             let expr = &self.expression;
-            let sign = &self.sign;
             let func = &self.func;
             let mut locat: usize = 0;
             let mut bracket: u32 = 0;
