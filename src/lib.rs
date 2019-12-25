@@ -217,61 +217,71 @@ pub mod bignum {
             let mut bracket: u32 = 0;
             let mut mark: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
             let pi = Float::with_val(128, Constant::Pi);
-            let funcs = ["abs","cos","sin","tan","sec","cosh","sinh","tanh","sech",
-                "acos","asin","atan","acosh","asinh","atanh","exp","ln","log","logx","sqrt"];
+            let funcs = ["abs","cos","sin","tan","csc","sec","cot","coth",
+                "cosh","sinh","tanh","sech","ln","csch","acos","asin","atan",
+                "acosh","asinh","atanh","exp","log","logx","sqrt","cbrt","fac"];
             let max = Float::with_val(2560, Float::parse("1e+768").unwrap());
             let min = Float::with_val(2560, Float::parse("-1e+768").unwrap());
 
-            let accurate = |value: Float| -> Result<Float, String> {
+            let accuracy = |value: Float| -> Result<Float, String> {
                 if max > value && min < value {
                     return Ok(value);
                 }
-                Err("Beyond The Precision Range".to_string())
+                Err("Beyond Accuracy".to_string())
             };
 
             let computing = |x: u8| -> Result<Float, String> {
                 let c1 = num.borrow_mut().pop().unwrap();
                 let c2 = num.borrow_mut().pop().unwrap();
                 match x {
-                    b'+' => accurate(c2 + c1),
-                    b'-' => accurate(c2 - c1),
-                    b'*' => accurate(c2 * c1),
-                    b'/' if c1 != 0.0 => accurate(c2 / c1),
-                    b'%' if c1 != 0.0 => accurate(Calc::fmod(&c2, &c1)),
-                    b'^' => accurate(c2.pow(c1)),
+                    b'+' => accuracy(c2 + c1),
+                    b'-' => accuracy(c2 - c1),
+                    b'*' => accuracy(c2 * c1),
+                    b'/' if c1 != 0.0 => accuracy(c2 / c1),
+                    b'%' if c1 != 0.0 => accuracy(Calc::fmod(&c2, &c1)),
+                    b'^' => accuracy(c2.pow(c1)),
                     _ => Err("Divide By Zero".to_string())
                 }
             };
 
-            let intercept = |n: usize, i: usize| -> Result<Float, String> {
+            let extract = |n: usize, i: usize| -> Result<Float, String> {
                 match Float::parse(&expr[n..i]) {
-                    Ok(valid) => accurate(Float::with_val(2560, valid)),
+                    Ok(valid) => accuracy(Float::with_val(2560, valid)),
                     Err(_) => Err("Invalid Number".to_string())
                 }
             };
 
-            let maths = |n: String, v: Float| -> Result<Float, String> {
+            let math = |n: String, v: Float| -> Result<Float, String> {
                 match n {
-                    _ if n == "abs" => accurate(v.abs()),
-                    _ if n == "cos" => accurate(v.cos()),
-                    _ if n == "sin" => accurate(v.sin()),
-                    _ if n == "tan" => accurate(v.tan()),
-                    _ if n == "sec" => accurate(v.sec()),
-                    _ if n == "atan" => accurate(v.atan()),
-                    _ if n == "cosh" => accurate(v.cosh()),
-                    _ if n == "sinh" => accurate(v.sinh()),
-                    _ if n == "tanh" => accurate(v.tanh()),
-                    _ if n == "sech" => accurate(v.sech()),
-                    _ if n == "asinh" => accurate(v.asinh()),
-                    _ if n == "exp" => accurate(v.exp()),
-                    _ if n == "ln" && v > 0.0 => accurate(v.ln()),
-                    _ if n == "log" && v > 0.0 => accurate(v.log2()),
-                    _ if n == "logx" && v > 0.0 => accurate(v.log10()),
-                    _ if n == "acosh" && v >= 1.0 => accurate(v.acosh()),
-                    _ if n == "sqrt" && v >= 0.0 => accurate(v.sqrt()),
-                    _ if n == "acos" && v >= -1.0 && v <= 1.0 => accurate(v.acos()),
-                    _ if n == "asin" && v >= -1.0 && v <= 1.0 => accurate(v.asin()),
-                    _ if n == "atanh" && v > -1.0 && v < 1.0 => accurate(v.atanh()),
+                    _ if n == "abs" => accuracy(v.abs()),
+                    _ if n == "exp" => accuracy(v.exp()),
+                    _ if n == "cos" => accuracy(v.cos()),
+                    _ if n == "sin" => accuracy(v.sin()),
+                    _ if n == "tan" => accuracy(v.tan()),
+                    _ if n == "sec" => accuracy(v.sec()),
+                    _ if n == "cosh" => accuracy(v.cosh()),
+                    _ if n == "sinh" => accuracy(v.sinh()),
+                    _ if n == "tanh" => accuracy(v.tanh()),
+                    _ if n == "sech" => accuracy(v.sech()),
+                    _ if n == "cbrt" => accuracy(v.cbrt()),
+                    _ if n == "atan" => accuracy(v.atan()),
+                    _ if n == "asinh" => accuracy(v.asinh()),
+                    _ if n == "csc" && v != 0.0 => accuracy(v.csc()),
+                    _ if n == "cot" && v != 0.0 => accuracy(v.cot()),
+                    _ if n == "csch" && v != 0.0 => accuracy(v.csch()),
+                    _ if n == "coth" && v != 0.0 => accuracy(v.coth()),
+                    _ if n == "ln" && v > 0.0 => accuracy(v.ln()),
+                    _ if n == "log" && v > 0.0 => accuracy(v.log2()),
+                    _ if n == "logx" && v > 0.0 => accuracy(v.log10()),
+                    _ if n == "sqrt" && v >= 0.0 => accuracy(v.sqrt()),
+                    _ if n == "acosh" && v >= 1.0 => accuracy(v.acosh()),
+                    _ if n == "acos" && v >= -1.0 && v <= 1.0 => accuracy(v.acos()),
+                    _ if n == "asin" && v >= -1.0 && v <= 1.0 => accuracy(v.asin()),
+                    _ if n == "atanh" && v > -1.0 && v < 1.0 => accuracy(v.atanh()),
+                    _ if n == "fac" => {
+                        let fac = Float::factorial(v.to_u32_saturating().unwrap());
+                        accuracy(Float::with_val(2560, fac))
+                    }
                     _ => Err("Expression Error".to_string())
                 }
             };
@@ -304,7 +314,7 @@ pub mod bignum {
                         }
 
                         if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                            match intercept(locat, index) {
+                            match extract(locat, index) {
                                 Ok(value) => num.borrow_mut().push(value),
                                 Err(err) => return Err(err)
                             }
@@ -363,7 +373,7 @@ pub mod bignum {
                     b')' => {
                         if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                             if mark == b'N' {
-                                match intercept(locat, index) {
+                                match extract(locat, index) {
                                     Ok(value) => num.borrow_mut().push(value),
                                     Err(err) => return Err(err)
                                 }
@@ -383,7 +393,7 @@ pub mod bignum {
 
                                 if let Some(fun_name) = func.borrow_mut().remove(&bracket) {
                                     let valid = num.borrow_mut().pop().unwrap();
-                                    match maths(fun_name, valid) {
+                                    match math(fun_name, valid) {
                                         Ok(value) => num.borrow_mut().push(value),
                                         Err(err) => return Err(err)
                                     }
@@ -407,7 +417,7 @@ pub mod bignum {
                         }
 
                         if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                            match intercept(locat, index) {
+                            match extract(locat, index) {
                                 Ok(value) => num.borrow_mut().push(value),
                                 Err(err) => return Err(err)
                             }
