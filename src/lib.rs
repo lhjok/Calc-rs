@@ -229,7 +229,7 @@ pub mod bignum {
                 Err("Beyond The Precision Range".to_string())
             };
 
-            let computing = |x: &u8| -> Result<Float, String> {
+            let computing = |x: u8| -> Result<Float, String> {
                 let c1 = num.borrow_mut().pop().unwrap();
                 let c2 = num.borrow_mut().pop().unwrap();
                 match x {
@@ -315,12 +315,11 @@ pub mod bignum {
                             let p1 = Calc::priority(ope.borrow().last().unwrap());
                             let p2 = Calc::priority(&ch);
                             if p1 >= p2 {
-                                let valid = computing(ope.borrow().last().unwrap());
+                                let valid = computing(ope.borrow_mut().pop().unwrap());
                                 match valid {
                                     Ok(value) => num.borrow_mut().push(value),
                                     Err(err) => return Err(err)
                                 }
-                                ope.borrow_mut().pop();
                             } else {
                                 break;
                             }
@@ -375,7 +374,7 @@ pub mod bignum {
                         if let Sign::Data = sign.clone().into_inner() {
                             if bracket > 0 {
                                 while ope.borrow().last().unwrap() != &b'(' {
-                                    let valid = computing(&ope.borrow_mut().pop().unwrap());
+                                    let valid = computing(ope.borrow_mut().pop().unwrap());
                                     match valid {
                                         Ok(value) => num.borrow_mut().push(value),
                                         Err(err) => return Err(err)
@@ -416,7 +415,7 @@ pub mod bignum {
                         }
 
                         while ope.borrow().len() != 0 {
-                            let valid = computing(&ope.borrow_mut().pop().unwrap());
+                            let valid = computing(ope.borrow_mut().pop().unwrap());
                             match valid {
                                 Ok(value) => num.borrow_mut().push(value),
                                 Err(err) => return Err(err)
