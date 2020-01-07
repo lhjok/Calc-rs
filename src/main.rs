@@ -1,4 +1,4 @@
-use calc::bignum::Calc;
+use calc::Calc;
 use ansi_term::Colour::RGB;
 
 fn main() {
