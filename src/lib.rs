@@ -11,20 +11,6 @@ enum Sign {
     Char
 }
 
-trait Priority {
-    fn priority(&self) -> u8;
-}
-
-trait Zero {
-    fn clean_zero(&self) -> String;
-}
-
-trait Comple {
-    fn fmod(&self, n: &Float) -> Float;
-    fn to_fixed(&self) -> String;
-    fn to_fixed_round(&self, n: Option<usize>) -> String;
-}
-
 pub struct Calc {
     sign: RefCell<Sign>,
     numbers: RefCell<Vec<Float>>,
@@ -33,15 +19,18 @@ pub struct Calc {
     expression: String,
 }
 
-impl Priority for u8 {
-    fn priority(&self) -> u8 {
-        match self {
-            b'+' | b'-' => 1,
-            b'*' | b'/' | b'%' => 2,
-            b'^' => 3,
-            _ => exit(0)
-        }
-    }
+trait Zero {
+    fn clean_zero(&self) -> String;
+}
+
+trait Priority {
+    fn priority(&self) -> u8;
+}
+
+trait Comple {
+    fn fmod(&self, n: &Float) -> Float;
+    fn to_fixed(&self) -> String;
+    fn to_fixed_round(&self, n: Option<usize>) -> String;
 }
 
 impl Zero for String {
@@ -66,6 +55,17 @@ impl Zero for String {
             return self[..self.len()-zero].to_string();
         }
         self.clone()
+    }
+}
+
+impl Priority for u8 {
+    fn priority(&self) -> u8 {
+        match self {
+            b'+' | b'-' => 1,
+            b'*' | b'/' | b'%' => 2,
+            b'^' => 3,
+            _ => exit(0)
+        }
     }
 }
 
@@ -370,7 +370,7 @@ impl Calc {
                             }
                         }
                         if find == false {
-                            return Err("Expression Error".to_string());
+                            return Err("Function Undefined".to_string());
                         }
                     }
 
@@ -470,7 +470,7 @@ impl Calc {
                     return Err("Expression Error".to_string());
                 }
 
-                _ => return Err("Operator Error".to_string())
+                _ => return Err("Operator Undefined".to_string())
             }
         }
         Err("No Terminator".to_string())
