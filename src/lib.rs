@@ -11,14 +11,6 @@ enum Sign {
     Char
 }
 
-pub struct Calc {
-    sign: RefCell<Sign>,
-    numbers: RefCell<Vec<Float>>,
-    operator: RefCell<Vec<u8>>,
-    func: RefCell<HashMap<u32, String>>,
-    expression: String,
-}
-
 trait Priority {
     fn priority(&self) -> u8;
 }
@@ -27,10 +19,18 @@ trait Zero {
     fn clean_zero(&self) -> String;
 }
 
-trait Fixed {
+trait Comple {
     fn fmod(&self, n: &Float) -> Float;
     fn to_fixed(&self) -> String;
     fn to_fixed_round(&self, n: Option<usize>) -> String;
+}
+
+pub struct Calc {
+    sign: RefCell<Sign>,
+    numbers: RefCell<Vec<Float>>,
+    operator: RefCell<Vec<u8>>,
+    func: RefCell<HashMap<u32, String>>,
+    expression: String,
 }
 
 impl Priority for u8 {
@@ -69,7 +69,7 @@ impl Zero for String {
     }
 }
 
-impl Fixed for Float {
+impl Comple for Float {
     fn fmod(&self, n: &Float) -> Float {
         let m = Float::with_val(2560, self / n);
         let res = if self < &0.0 {
@@ -272,35 +272,35 @@ impl Calc {
         let math = |n: String, v: Float| -> Result<Float, String> {
             match n {
                 _ if n == "abs" => accuracy(&v.abs()),
+                _ if n == "ln" && v > 0.0 => accuracy(&v.ln()),
                 _ if n == "exp" => accuracy(&v.exp()),
+                _ if n == "log" && v > 0.0 => accuracy(&v.log2()),
+                _ if n == "logx" && v > 0.0 => accuracy(&v.log10()),
                 _ if n == "cos" => accuracy(&v.cos()),
                 _ if n == "sin" => accuracy(&v.sin()),
                 _ if n == "tan" => accuracy(&v.tan()),
+                _ if n == "csc" && v != 0.0 => accuracy(&v.csc()),
                 _ if n == "sec" => accuracy(&v.sec()),
+                _ if n == "cot" && v != 0.0 => accuracy(&v.cot()),
                 _ if n == "cosh" => accuracy(&v.cosh()),
                 _ if n == "sinh" => accuracy(&v.sinh()),
                 _ if n == "tanh" => accuracy(&v.tanh()),
-                _ if n == "sech" => accuracy(&v.sech()),
-                _ if n == "cbrt" => accuracy(&v.cbrt()),
-                _ if n == "atan" => accuracy(&v.atan()),
-                _ if n == "asinh" => accuracy(&v.asinh()),
-                _ if n == "csc" && v != 0.0 => accuracy(&v.csc()),
-                _ if n == "cot" && v != 0.0 => accuracy(&v.cot()),
                 _ if n == "csch" && v != 0.0 => accuracy(&v.csch()),
+                _ if n == "sech" => accuracy(&v.sech()),
                 _ if n == "coth" && v != 0.0 => accuracy(&v.coth()),
-                _ if n == "ln" && v > 0.0 => accuracy(&v.ln()),
-                _ if n == "log" && v > 0.0 => accuracy(&v.log2()),
-                _ if n == "logx" && v > 0.0 => accuracy(&v.log10()),
-                _ if n == "sqrt" && v >= 0.0 => accuracy(&v.sqrt()),
-                _ if n == "acosh" && v >= 1.0 => accuracy(&v.acosh()),
                 _ if n == "acos" && v >= -1.0 && v <= 1.0 => accuracy(&v.acos()),
                 _ if n == "asin" && v >= -1.0 && v <= 1.0 => accuracy(&v.asin()),
+                _ if n == "atan" => accuracy(&v.atan()),
+                _ if n == "acosh" && v >= 1.0 => accuracy(&v.acosh()),
+                _ if n == "asinh" => accuracy(&v.asinh()),
                 _ if n == "atanh" && v > -1.0 && v < 1.0 => accuracy(&v.atanh()),
+                _ if n == "cbrt" => accuracy(&v.cbrt()),
+                _ if n == "sqrt" && v >= 0.0 => accuracy(&v.sqrt()),
                 _ if n == "fac" => {
                     let fac = Float::factorial(v.to_u32_saturating().unwrap());
                     accuracy(&Float::with_val(2560, fac))
                 }
-                _ => Err("Expression Error".to_string())
+                _ => Err("Parameter Error".to_string())
             }
         };
 
