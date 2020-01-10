@@ -332,20 +332,15 @@ impl Calc {
                     }
 
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                        match extract(locat, index) {
-                            Ok(value) => num.borrow_mut().push(value),
-                            Err(err) => return Err(err)
-                        }
+                        let value = extract(locat, index)?;
+                        num.borrow_mut().push(value);
                         *sign.borrow_mut() = Sign::Data;
                     }
 
                     while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
                         if ope.borrow().last().unwrap().priority() >= ch.priority() {
-                            let valid = computing(&ope.borrow_mut().pop().unwrap());
-                            match valid {
-                                Ok(value) => num.borrow_mut().push(value),
-                                Err(err) => return Err(err)
-                            }
+                            let value = computing(&ope.borrow_mut().pop().unwrap())?;
+                            num.borrow_mut().push(value);
                         } else {
                             break;
                         }
@@ -389,10 +384,8 @@ impl Calc {
                 b')' => {
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                         if mark == b'N' {
-                            match extract(locat, index) {
-                                Ok(value) => num.borrow_mut().push(value),
-                                Err(err) => return Err(err)
-                            }
+                            let value = extract(locat, index)?;
+                            num.borrow_mut().push(value);
                             *sign.borrow_mut() = Sign::Data;
                         }
                     }
@@ -400,19 +393,13 @@ impl Calc {
                     if let Sign::Data = sign.clone().into_inner() {
                         if bracket > 0 {
                             while ope.borrow().last().unwrap() != &b'(' {
-                                let valid = computing(&ope.borrow_mut().pop().unwrap());
-                                match valid {
-                                    Ok(value) => num.borrow_mut().push(value),
-                                    Err(err) => return Err(err)
-                                }
+                                let value = computing(&ope.borrow_mut().pop().unwrap())?;
+                                num.borrow_mut().push(value);
                             }
 
-                            if let Some(fun_name) = func.borrow_mut().remove(&bracket) {
-                                let valid = num.borrow_mut().pop().unwrap();
-                                match math(fun_name, valid) {
-                                    Ok(value) => num.borrow_mut().push(value),
-                                    Err(err) => return Err(err)
-                                }
+                            if let Some(func) = func.borrow_mut().remove(&bracket) {
+                                let value = math(func, num.borrow_mut().pop().unwrap())?;
+                                num.borrow_mut().push(value);
                             }
 
                             ope.borrow_mut().pop();
@@ -433,23 +420,16 @@ impl Calc {
                     }
 
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                        match extract(locat, index) {
-                            Ok(value) => num.borrow_mut().push(value),
-                            Err(err) => return Err(err)
-                        }
+                        let value = extract(locat, index)?;
+                        num.borrow_mut().push(value);
                         *sign.borrow_mut() = Sign::Data;
                     }
 
                     while ope.borrow().len() != 0 {
-                        let valid = computing(&ope.borrow_mut().pop().unwrap());
-                        match valid {
-                            Ok(value) => num.borrow_mut().push(value),
-                            Err(err) => return Err(err)
-                        }
+                        let value = computing(&ope.borrow_mut().pop().unwrap())?;
+                        num.borrow_mut().push(value);
                     }
-
-                    let res = num.borrow_mut().pop().unwrap();
-                    return Ok(res);
+                    return Ok(num.borrow_mut().pop().unwrap());
                 }
 
                 b'P' => {
