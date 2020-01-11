@@ -184,20 +184,17 @@ impl Comple for Float {
                     if v == &b'.' || v == &b'-' {
                         continue;
                     }
-
                     if i == rev.len()-1-n {
                         let a = res.remove(0+n).to_digit(10).unwrap();
                         res.insert_str(0+n, &(a+1).to_string());
                         return res.clean_zero();
                     }
-
                     let a = rev[i..i+1].parse::<u32>().unwrap();
                     let mut b: u32 = 0;
                     let nonum = rev[i+1..i+2].as_bytes();
                     if nonum != &[b'.'] && nonum != &[b'-'] {
                         b = rev[i+1..i+2].parse::<u32>().unwrap();
                     }
-
                     if a == 9 {
                         res.remove(res.len()-1-i);
                         res.insert(res.len()-i, from_digit(0, 10).unwrap());
@@ -332,8 +329,7 @@ impl Calc {
                     }
 
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                        let value = extract(locat, index)?;
-                        num.borrow_mut().push(value);
+                        num.borrow_mut().push(extract(locat, index)?);
                         *sign.borrow_mut() = Sign::Data;
                     }
 
@@ -384,8 +380,7 @@ impl Calc {
                 b')' => {
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                         if mark == b'N' {
-                            let value = extract(locat, index)?;
-                            num.borrow_mut().push(value);
+                            num.borrow_mut().push(extract(locat, index)?);
                             *sign.borrow_mut() = Sign::Data;
                         }
                     }
@@ -420,8 +415,7 @@ impl Calc {
                     }
 
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                        let value = extract(locat, index)?;
-                        num.borrow_mut().push(value);
+                        num.borrow_mut().push(extract(locat, index)?);
                         *sign.borrow_mut() = Sign::Data;
                     }
 
@@ -429,7 +423,8 @@ impl Calc {
                         let value = computing(&ope.borrow_mut().pop().unwrap())?;
                         num.borrow_mut().push(value);
                     }
-                    return Ok(num.borrow_mut().pop().unwrap());
+                    let res = num.borrow_mut().pop().unwrap();
+                    return Ok(res);
                 }
 
                 b'P' => {
