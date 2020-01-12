@@ -3,6 +3,19 @@ use rug::{float::Constant, Float};
 use std::{char::from_digit, cell::RefCell};
 use std::collections::HashMap;
 use std::process::exit;
+use lazy_static::lazy_static;
+
+#[macro_use]
+lazy_static! {
+    static ref MAX: Float = {
+        let mx = Float::parse("1e+768").unwrap();
+        Float::with_val(2560, mx)
+    }; 
+    static ref MIN: Float = {
+        let mn = Float::parse("-1e+768").unwrap();
+        Float::with_val(2560, mn)
+    };
+}
 
 #[derive(Clone)]
 enum Sign {
@@ -19,84 +32,24 @@ pub struct Calc {
     expression: String,
 }
 
-trait Zero {
-    fn clean_zero(&self) -> String;
-    fn math(&self, v: Float) -> Result<Float, String>;
-}
-
-trait Priority {
+trait Symbol {
     fn priority(&self) -> u8;
     fn computing(&self, n: &Float, v: &Float) -> Result<Float, String>;
 }
 
-trait Comple {
+trait Bignum {
     fn fmod(&self, n: &Float) -> Float;
     fn accuracy(&self) -> Result<Float, String>;
     fn to_fixed(&self) -> String;
     fn to_fixed_round(&self, n: Option<usize>) -> String;
 }
 
-impl Zero for String {
-    fn clean_zero(&self) -> String {
-        let mut find: bool = false;
-        let (mut zero, mut dig) = (0, 0);
-        for v in self.as_bytes().iter() {
-            dig += 1;
-            zero += 1;
-            if v == &b'.'{
-                dig = 0;
-                find = true;
-            }
-            if v != &b'0' {
-                zero = 0;
-            }
-        }
-        if find == true {
-            if zero == dig {
-                return self[..self.len()-dig-1].to_string();
-            }
-            return self[..self.len()-zero].to_string();
-        }
-        self.clone()
-    }
-
-    fn math(&self, v: Float) -> Result<Float, String> {
-        match self {
-            _ if self == "abs" => v.abs().accuracy(),
-            _ if self == "ln" && v > 0.0 => v.ln().accuracy(),
-            _ if self == "exp" => v.exp().accuracy(),
-            _ if self == "log" && v > 0.0 => v.log2().accuracy(),
-            _ if self == "logx" && v > 0.0 => v.log10().accuracy(),
-            _ if self == "cos" => v.cos().accuracy(),
-            _ if self == "sin" => v.sin().accuracy(),
-            _ if self == "tan" => v.tan().accuracy(),
-            _ if self == "csc" && v != 0.0 => v.csc().accuracy(),
-            _ if self == "sec" => v.sec().accuracy(),
-            _ if self == "cot" && v != 0.0 => v.cot().accuracy(),
-            _ if self == "cosh" => v.cosh().accuracy(),
-            _ if self == "sinh" => v.sinh().accuracy(),
-            _ if self == "tanh" => v.tanh().accuracy(),
-            _ if self == "csch" && v != 0.0 => v.csch().accuracy(),
-            _ if self == "sech" => v.sech().accuracy(),
-            _ if self == "ccoth" && v != 0.0 => v.coth().accuracy(),
-            _ if self == "acos" && v >= -1.0 && v <= 1.0 => v.acos().accuracy(),
-            _ if self == "asin" && v >= -1.0 && v <= 1.0 => v.asin().accuracy(),
-            _ if self == "atan" => v.atan().accuracy(),
-            _ if self == "acosh" && v >= 1.0 => v.acosh().accuracy(),
-            _ if self == "asinh" => v.asinh().accuracy(),
-            _ if self == "atanh" && v > -1.0 && v < 1.0 => v.atanh().accuracy(),
-            _ if self == "cbrt" => v.cbrt().accuracy(),
-            _ if self == "sqrt" && v >= 0.0 => v.sqrt().accuracy(),
-            _ if self == "fac" => {
-                let fac = Float::factorial(v.to_u32_saturating().unwrap());
-                Float::with_val(2560, fac).accuracy()
-            }
-            _ => Err("Parameter Error".to_string())
-        }
-    }
+trait Other {
+    fn clean_zero(&self) -> String;
+    fn math(&self, v: Float) -> Result<Float, String>;
 }
 
-impl Priority for u8 {
+impl Symbol for u8 {
     fn priority(&self) -> u8 {
         match self {
             b'+' | b'-' => 1,
@@ -119,7 +72,7 @@ impl Priority for u8 {
     }
 }
 
-impl Comple for Float {
+impl Bignum for Float {
     fn fmod(&self, n: &Float) -> Float {
         let m = Float::with_val(2560, self / n);
         let res = if self < &0.0 {
@@ -129,11 +82,7 @@ impl Comple for Float {
     }
 
     fn accuracy(&self) -> Result<Float, String> {
-        let mx = Float::parse("1e+768").unwrap();
-        let mn = Float::parse("-1e+768").unwrap();
-        let max = Float::with_val(2560, mx);
-        let min = Float::with_val(2560, mn);
-        if &max > self && &min < self {
+        if *MAX > *self && *MIN < *self {
             return Ok(self.clone());
         }
         Err("Beyond Accuracy".to_string())
@@ -268,6 +217,66 @@ impl Comple for Float {
                 }
                 exit(0)
             }
+        }
+    }
+}
+
+impl Other for String {
+    fn clean_zero(&self) -> String {
+        let mut find: bool = false;
+        let (mut zero, mut dig) = (0, 0);
+        for v in self.as_bytes().iter() {
+            dig += 1;
+            zero += 1;
+            if v == &b'.'{
+                dig = 0;
+                find = true;
+            }
+            if v != &b'0' {
+                zero = 0;
+            }
+        }
+        if find == true {
+            if zero == dig {
+                return self[..self.len()-dig-1].to_string();
+            }
+            return self[..self.len()-zero].to_string();
+        }
+        self.clone()
+    }
+
+    fn math(&self, v: Float) -> Result<Float, String> {
+        match self {
+            _ if self == "abs" => v.abs().accuracy(),
+            _ if self == "ln" && v > 0.0 => v.ln().accuracy(),
+            _ if self == "exp" => v.exp().accuracy(),
+            _ if self == "log" && v > 0.0 => v.log2().accuracy(),
+            _ if self == "logx" && v > 0.0 => v.log10().accuracy(),
+            _ if self == "cos" => v.cos().accuracy(),
+            _ if self == "sin" => v.sin().accuracy(),
+            _ if self == "tan" => v.tan().accuracy(),
+            _ if self == "csc" && v != 0.0 => v.csc().accuracy(),
+            _ if self == "sec" => v.sec().accuracy(),
+            _ if self == "cot" && v != 0.0 => v.cot().accuracy(),
+            _ if self == "cosh" => v.cosh().accuracy(),
+            _ if self == "sinh" => v.sinh().accuracy(),
+            _ if self == "tanh" => v.tanh().accuracy(),
+            _ if self == "csch" && v != 0.0 => v.csch().accuracy(),
+            _ if self == "sech" => v.sech().accuracy(),
+            _ if self == "coth" && v != 0.0 => v.coth().accuracy(),
+            _ if self == "acos" && v >= -1.0 && v <= 1.0 => v.acos().accuracy(),
+            _ if self == "asin" && v >= -1.0 && v <= 1.0 => v.asin().accuracy(),
+            _ if self == "atan" => v.atan().accuracy(),
+            _ if self == "acosh" && v >= 1.0 => v.acosh().accuracy(),
+            _ if self == "asinh" => v.asinh().accuracy(),
+            _ if self == "atanh" && v > -1.0 && v < 1.0 => v.atanh().accuracy(),
+            _ if self == "cbrt" => v.cbrt().accuracy(),
+            _ if self == "sqrt" && v >= 0.0 => v.sqrt().accuracy(),
+            _ if self == "fac" => {
+                let fac = Float::factorial(v.to_u32_saturating().unwrap());
+                Float::with_val(2560, fac).accuracy()
+            }
+            _ => Err("Parameter Error".to_string())
         }
     }
 }
