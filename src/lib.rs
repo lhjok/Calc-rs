@@ -21,14 +21,17 @@ pub struct Calc {
 
 trait Zero {
     fn clean_zero(&self) -> String;
+    fn math(&self, v: Float) -> Result<Float, String>;
 }
 
 trait Priority {
     fn priority(&self) -> u8;
+    fn computing(&self, n: &Float, v: &Float) -> Result<Float, String>;
 }
 
 trait Comple {
     fn fmod(&self, n: &Float) -> Float;
+    fn accuracy(&self) -> Result<Float, String>;
     fn to_fixed(&self) -> String;
     fn to_fixed_round(&self, n: Option<usize>) -> String;
 }
@@ -56,6 +59,41 @@ impl Zero for String {
         }
         self.clone()
     }
+
+    fn math(&self, v: Float) -> Result<Float, String> {
+        match self {
+            _ if self == "abs" => v.abs().accuracy(),
+            _ if self == "ln" && v > 0.0 => v.ln().accuracy(),
+            _ if self == "exp" => v.exp().accuracy(),
+            _ if self == "log" && v > 0.0 => v.log2().accuracy(),
+            _ if self == "logx" && v > 0.0 => v.log10().accuracy(),
+            _ if self == "cos" => v.cos().accuracy(),
+            _ if self == "sin" => v.sin().accuracy(),
+            _ if self == "tan" => v.tan().accuracy(),
+            _ if self == "csc" && v != 0.0 => v.csc().accuracy(),
+            _ if self == "sec" => v.sec().accuracy(),
+            _ if self == "cot" && v != 0.0 => v.cot().accuracy(),
+            _ if self == "cosh" => v.cosh().accuracy(),
+            _ if self == "sinh" => v.sinh().accuracy(),
+            _ if self == "tanh" => v.tanh().accuracy(),
+            _ if self == "csch" && v != 0.0 => v.csch().accuracy(),
+            _ if self == "sech" => v.sech().accuracy(),
+            _ if self == "ccoth" && v != 0.0 => v.coth().accuracy(),
+            _ if self == "acos" && v >= -1.0 && v <= 1.0 => v.acos().accuracy(),
+            _ if self == "asin" && v >= -1.0 && v <= 1.0 => v.asin().accuracy(),
+            _ if self == "atan" => v.atan().accuracy(),
+            _ if self == "acosh" && v >= 1.0 => v.acosh().accuracy(),
+            _ if self == "asinh" => v.asinh().accuracy(),
+            _ if self == "atanh" && v > -1.0 && v < 1.0 => v.atanh().accuracy(),
+            _ if self == "cbrt" => v.cbrt().accuracy(),
+            _ if self == "sqrt" && v >= 0.0 => v.sqrt().accuracy(),
+            _ if self == "fac" => {
+                let fac = Float::factorial(v.to_u32_saturating().unwrap());
+                Float::with_val(2560, fac).accuracy()
+            }
+            _ => Err("Parameter Error".to_string())
+        }
+    }
 }
 
 impl Priority for u8 {
@@ -67,6 +105,18 @@ impl Priority for u8 {
             _ => exit(0)
         }
     }
+
+    fn computing(&self, c1: &Float, c2: &Float) -> Result<Float, String> {
+        match self {
+            b'+' => Float::with_val(2560, c2 + c1).accuracy(),
+            b'-' => Float::with_val(2560, c2 - c1).accuracy(),
+            b'*' => Float::with_val(2560, c2 * c1).accuracy(),
+            b'/' if c1 != &0.0 => Float::with_val(2560, c2 / c1).accuracy(),
+            b'%' if c1 != &0.0 => c2.fmod(c1).accuracy(),
+            b'^' => Float::with_val(2560, c2.pow(c1)).accuracy(),
+            _ => Err("Divide By Zero".to_string())
+        }
+    }
 }
 
 impl Comple for Float {
@@ -76,6 +126,17 @@ impl Comple for Float {
             m.ceil()
         } else { m.floor() };
         self - res * n
+    }
+
+    fn accuracy(&self) -> Result<Float, String> {
+        let mx = Float::parse("1e+768").unwrap();
+        let mn = Float::parse("-1e+768").unwrap();
+        let max = Float::with_val(2560, mx);
+        let min = Float::with_val(2560, mn);
+        if &max > self && &min < self {
+            return Ok(self.clone());
+        }
+        Err("Beyond Accuracy".to_string())
     }
 
     fn to_fixed(&self) -> String {
@@ -231,73 +292,15 @@ impl Calc {
         let mut locat: usize = 0;
         let mut bracket: u32 = 0;
         let mut mark: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
-        let pi = Float::with_val(128, Constant::Pi);
-        let funcs = ["abs","cos","sin","tan","csc","sec","cot","coth",
+        let math = ["abs","cos","sin","tan","csc","sec","cot","coth",
         "cosh","sinh","tanh","sech","ln","csch","acos","asin","atan",
         "acosh","asinh","atanh","exp","log","logx","sqrt","cbrt","fac"];
-        let max = Float::with_val(2560, Float::parse("1e+768").unwrap());
-        let min = Float::with_val(2560, Float::parse("-1e+768").unwrap());
-
-        let accuracy = |value: &Float| -> Result<Float, String> {
-            if &max > value && &min < value {
-                return Ok(value.clone());
-            }
-            Err("Beyond Accuracy".to_string())
-        };
-
-        let computing = |x: &u8| -> Result<Float, String> {
-            let c1 = num.borrow_mut().pop().unwrap();
-            let c2 = num.borrow_mut().pop().unwrap();
-            match x {
-                b'+' => accuracy(&Float::with_val(2560, &c2 + &c1)),
-                b'-' => accuracy(&Float::with_val(2560, &c2 - &c1)),
-                b'*' => accuracy(&Float::with_val(2560, &c2 * &c1)),
-                b'/' if c1 != 0.0 => accuracy(&Float::with_val(2560, &c2 / &c1)),
-                b'%' if c1 != 0.0 => accuracy(&c2.fmod(&c1)),
-                b'^' => accuracy(&c2.pow(&c1)),
-                _ => Err("Divide By Zero".to_string())
-            }
-        };
+        let pi = Float::with_val(128, Constant::Pi);
 
         let extract = |n: usize, i: usize| -> Result<Float, String> {
             match Float::parse(&expr[n..i]) {
-                Ok(valid) => accuracy(&Float::with_val(2560, valid)),
+                Ok(valid) => Float::with_val(2560, valid).accuracy(),
                 Err(_) => Err("Invalid Number".to_string())
-            }
-        };
-
-        let math = |n: String, v: Float| -> Result<Float, String> {
-            match n {
-                _ if n == "abs" => accuracy(&v.abs()),
-                _ if n == "ln" && v > 0.0 => accuracy(&v.ln()),
-                _ if n == "exp" => accuracy(&v.exp()),
-                _ if n == "log" && v > 0.0 => accuracy(&v.log2()),
-                _ if n == "logx" && v > 0.0 => accuracy(&v.log10()),
-                _ if n == "cos" => accuracy(&v.cos()),
-                _ if n == "sin" => accuracy(&v.sin()),
-                _ if n == "tan" => accuracy(&v.tan()),
-                _ if n == "csc" && v != 0.0 => accuracy(&v.csc()),
-                _ if n == "sec" => accuracy(&v.sec()),
-                _ if n == "cot" && v != 0.0 => accuracy(&v.cot()),
-                _ if n == "cosh" => accuracy(&v.cosh()),
-                _ if n == "sinh" => accuracy(&v.sinh()),
-                _ if n == "tanh" => accuracy(&v.tanh()),
-                _ if n == "csch" && v != 0.0 => accuracy(&v.csch()),
-                _ if n == "sech" => accuracy(&v.sech()),
-                _ if n == "coth" && v != 0.0 => accuracy(&v.coth()),
-                _ if n == "acos" && v >= -1.0 && v <= 1.0 => accuracy(&v.acos()),
-                _ if n == "asin" && v >= -1.0 && v <= 1.0 => accuracy(&v.asin()),
-                _ if n == "atan" => accuracy(&v.atan()),
-                _ if n == "acosh" && v >= 1.0 => accuracy(&v.acosh()),
-                _ if n == "asinh" => accuracy(&v.asinh()),
-                _ if n == "atanh" && v > -1.0 && v < 1.0 => accuracy(&v.atanh()),
-                _ if n == "cbrt" => accuracy(&v.cbrt()),
-                _ if n == "sqrt" && v >= 0.0 => accuracy(&v.sqrt()),
-                _ if n == "fac" => {
-                    let fac = Float::factorial(v.to_u32_saturating().unwrap());
-                    accuracy(&Float::with_val(2560, fac))
-                }
-                _ => Err("Parameter Error".to_string())
             }
         };
 
@@ -335,8 +338,10 @@ impl Calc {
 
                     while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
                         if ope.borrow().last().unwrap().priority() >= ch.priority() {
-                            let value = computing(&ope.borrow_mut().pop().unwrap())?;
-                            num.borrow_mut().push(value);
+                            let n1 = num.borrow_mut().pop().unwrap();
+                            let n2 = num.borrow_mut().pop().unwrap();
+                            let op = ope.borrow_mut().pop().unwrap();
+                            num.borrow_mut().push(op.computing(&n1, &n2)?);
                         } else {
                             break;
                         }
@@ -353,7 +358,7 @@ impl Calc {
                     if mark == b'F' {
                         let mut find: bool = false;
                         let valid = expr[locat..index].to_string();
-                        for value in funcs.iter() {
+                        for value in math.iter() {
                             if value == &valid {
                                 func.borrow_mut().insert(bracket+1, valid.clone());
                                 find = true;
@@ -388,12 +393,14 @@ impl Calc {
                     if let Sign::Data = sign.clone().into_inner() {
                         if bracket > 0 {
                             while ope.borrow().last().unwrap() != &b'(' {
-                                let value = computing(&ope.borrow_mut().pop().unwrap())?;
-                                num.borrow_mut().push(value);
+                                let n1 = num.borrow_mut().pop().unwrap();
+                                let n2 = num.borrow_mut().pop().unwrap();
+                                let op = ope.borrow_mut().pop().unwrap();
+                                num.borrow_mut().push(op.computing(&n1, &n2)?);
                             }
 
-                            if let Some(func) = func.borrow_mut().remove(&bracket) {
-                                let value = math(func, num.borrow_mut().pop().unwrap())?;
+                            if let Some(fun) = func.borrow_mut().remove(&bracket) {
+                                let value = fun.math(num.borrow_mut().pop().unwrap())?;
                                 num.borrow_mut().push(value);
                             }
 
@@ -420,8 +427,10 @@ impl Calc {
                     }
 
                     while ope.borrow().len() != 0 {
-                        let value = computing(&ope.borrow_mut().pop().unwrap())?;
-                        num.borrow_mut().push(value);
+                        let n1 = num.borrow_mut().pop().unwrap();
+                        let n2 = num.borrow_mut().pop().unwrap();
+                        let op = ope.borrow_mut().pop().unwrap();
+                        num.borrow_mut().push(op.computing(&n1, &n2)?);
                     }
                     let res = num.borrow_mut().pop().unwrap();
                     return Ok(res);
