@@ -34,7 +34,7 @@ pub struct Calc {
 
 trait Symbol {
     fn priority(&self) -> u8;
-    fn computing(&self, n: &Float, v: &Float) -> Result<Float, String>;
+    fn computing(&self, n: &Calc) -> Result<Float, String>;
 }
 
 trait Bignum {
@@ -59,14 +59,16 @@ impl Symbol for u8 {
         }
     }
 
-    fn computing(&self, c1: &Float, c2: &Float) -> Result<Float, String> {
+    fn computing(&self, num: &Calc) -> Result<Float, String> {
+        let c1 = num.numbers.borrow_mut().pop().unwrap();
+        let c2 = num.numbers.borrow_mut().pop().unwrap();
         match self {
-            b'+' => Float::with_val(2560, c2 + c1).accuracy(),
-            b'-' => Float::with_val(2560, c2 - c1).accuracy(),
-            b'*' => Float::with_val(2560, c2 * c1).accuracy(),
-            b'/' if c1 != &0.0 => Float::with_val(2560, c2 / c1).accuracy(),
-            b'%' if c1 != &0.0 => c2.fmod(c1).accuracy(),
-            b'^' => Float::with_val(2560, c2.pow(c1)).accuracy(),
+            b'+' => Float::with_val(2560, &c2 + &c1).accuracy(),
+            b'-' => Float::with_val(2560, &c2 - &c1).accuracy(),
+            b'*' => Float::with_val(2560, &c2 * &c1).accuracy(),
+            b'/' if &c1 != &0.0 => Float::with_val(2560, &c2 / &c1).accuracy(),
+            b'%' if &c1 != &0.0 => c2.fmod(&c1).accuracy(),
+            b'^' => Float::with_val(2560, &c2.pow(&c1)).accuracy(),
             _ => Err("Divide By Zero".to_string())
         }
     }
@@ -347,10 +349,8 @@ impl Calc {
 
                     while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
                         if ope.borrow().last().unwrap().priority() >= ch.priority() {
-                            let n1 = num.borrow_mut().pop().unwrap();
-                            let n2 = num.borrow_mut().pop().unwrap();
-                            let op = ope.borrow_mut().pop().unwrap();
-                            num.borrow_mut().push(op.computing(&n1, &n2)?);
+                            let o = ope.borrow_mut().pop().unwrap();
+                            num.borrow_mut().push(o.computing(self)?);
                         } else {
                             break;
                         }
@@ -402,10 +402,8 @@ impl Calc {
                     if let Sign::Data = sign.clone().into_inner() {
                         if bracket > 0 {
                             while ope.borrow().last().unwrap() != &b'(' {
-                                let n1 = num.borrow_mut().pop().unwrap();
-                                let n2 = num.borrow_mut().pop().unwrap();
-                                let op = ope.borrow_mut().pop().unwrap();
-                                num.borrow_mut().push(op.computing(&n1, &n2)?);
+                                let o = ope.borrow_mut().pop().unwrap();
+                                num.borrow_mut().push(o.computing(self)?);
                             }
 
                             if let Some(fun) = func.borrow_mut().remove(&bracket) {
@@ -436,10 +434,8 @@ impl Calc {
                     }
 
                     while ope.borrow().len() != 0 {
-                        let n1 = num.borrow_mut().pop().unwrap();
-                        let n2 = num.borrow_mut().pop().unwrap();
-                        let op = ope.borrow_mut().pop().unwrap();
-                        num.borrow_mut().push(op.computing(&n1, &n2)?);
+                        let o = ope.borrow_mut().pop().unwrap();
+                        num.borrow_mut().push(o.computing(self)?);
                     }
                     let res = num.borrow_mut().pop().unwrap();
                     return Ok(res);
@@ -448,12 +444,10 @@ impl Calc {
                 b'P' => {
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                         if mark != b'N' && mark != b'F' {
-                            let pi2 = if mark == b'-' {
+                            let value = if mark == b'-' {
                                 Float::with_val(128, 0.0 - &pi)
-                            } else {
-                                Float::with_val(128, &pi)
-                            };
-                            num.borrow_mut().push(pi2);
+                            } else { pi.clone() };
+                            num.borrow_mut().push(value);
                             *sign.borrow_mut() = Sign::Data;
                             locat = index + 1;
                             mark = b'P';
