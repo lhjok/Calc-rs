@@ -349,8 +349,8 @@ impl Calc {
 
                     while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
                         if ope.borrow().last().unwrap().priority() >= ch.priority() {
-                            let o = ope.borrow_mut().pop().unwrap();
-                            num.borrow_mut().push(o.computing(self)?);
+                            let value = ope.borrow_mut().pop().unwrap().computing(self)?;
+                            num.borrow_mut().push(value);
                         } else {
                             break;
                         }
@@ -402,8 +402,8 @@ impl Calc {
                     if let Sign::Data = sign.clone().into_inner() {
                         if bracket > 0 {
                             while ope.borrow().last().unwrap() != &b'(' {
-                                let o = ope.borrow_mut().pop().unwrap();
-                                num.borrow_mut().push(o.computing(self)?);
+                                let value = ope.borrow_mut().pop().unwrap().computing(self)?;
+                                num.borrow_mut().push(value);
                             }
 
                             if let Some(fun) = func.borrow_mut().remove(&bracket) {
@@ -434,8 +434,8 @@ impl Calc {
                     }
 
                     while ope.borrow().len() != 0 {
-                        let o = ope.borrow_mut().pop().unwrap();
-                        num.borrow_mut().push(o.computing(self)?);
+                        let value = ope.borrow_mut().pop().unwrap().computing(self)?;
+                        num.borrow_mut().push(value);
                     }
                     let res = num.borrow_mut().pop().unwrap();
                     return Ok(res);
