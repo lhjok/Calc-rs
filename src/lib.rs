@@ -46,7 +46,7 @@ trait Bignum {
 
 trait Other {
     fn clean_zero(&self) -> String;
-    fn math(&self, v: Float) -> Result<Float, String>;
+    fn math(&self, v: &Float) -> Result<Float, String>;
 }
 
 impl Symbol for u8 {
@@ -247,33 +247,33 @@ impl Other for String {
         self.clone()
     }
 
-    fn math(&self, v: Float) -> Result<Float, String> {
+    fn math(&self, v: &Float) -> Result<Float, String> {
         match self {
-            _ if self == "abs" => v.abs().accuracy(),
-            _ if self == "ln" && &v > &0.0 => v.ln().accuracy(),
-            _ if self == "exp" => v.exp().accuracy(),
-            _ if self == "log" && &v > &0.0 => v.log2().accuracy(),
-            _ if self == "logx" && &v > &0.0 => v.log10().accuracy(),
-            _ if self == "cos" => v.cos().accuracy(),
-            _ if self == "sin" => v.sin().accuracy(),
-            _ if self == "tan" => v.tan().accuracy(),
-            _ if self == "csc" && &v != &0.0 => v.csc().accuracy(),
-            _ if self == "sec" => v.sec().accuracy(),
-            _ if self == "cot" && &v != &0.0 => v.cot().accuracy(),
-            _ if self == "cosh" => v.cosh().accuracy(),
-            _ if self == "sinh" => v.sinh().accuracy(),
-            _ if self == "tanh" => v.tanh().accuracy(),
-            _ if self == "csch" && &v != &0.0 => v.csch().accuracy(),
-            _ if self == "sech" => v.sech().accuracy(),
-            _ if self == "coth" && &v != &0.0 => v.coth().accuracy(),
-            _ if self == "acos" && &v >= &-1.0 && &v <= &1.0 => v.acos().accuracy(),
-            _ if self == "asin" && &v >= &-1.0 && &v <= &1.0 => v.asin().accuracy(),
-            _ if self == "atan" => v.atan().accuracy(),
-            _ if self == "acosh" && &v >= &1.0 => v.acosh().accuracy(),
-            _ if self == "asinh" => v.asinh().accuracy(),
-            _ if self == "atanh" && &v > &-1.0 && &v < &1.0 => v.atanh().accuracy(),
-            _ if self == "cbrt" => v.cbrt().accuracy(),
-            _ if self == "sqrt" && &v >= &0.0 => v.sqrt().accuracy(),
+            _ if self == "abs" => Float::with_val(2560, v.abs_ref()).accuracy(),
+            _ if self == "ln" && v > &0.0 => Float::with_val(2560, v.ln_ref()).accuracy(),
+            _ if self == "exp" => Float::with_val(2560, v.exp_ref()).accuracy(),
+            _ if self == "log" && v > &0.0 => Float::with_val(2560, v.log2_ref()).accuracy(),
+            _ if self == "logx" && v > &0.0 => Float::with_val(2560, v.log10_ref()).accuracy(),
+            _ if self == "cos" => Float::with_val(2560, v.cos_ref()).accuracy(),
+            _ if self == "sin" => Float::with_val(2560, v.sin_ref()).accuracy(),
+            _ if self == "tan" => Float::with_val(2560, v.tan_ref()).accuracy(),
+            _ if self == "csc" && v != &0.0 => Float::with_val(2560, v.csc_ref()).accuracy(),
+            _ if self == "sec" => Float::with_val(2560, v.sec_ref()).accuracy(),
+            _ if self == "cot" && v != &0.0 => Float::with_val(2560, v.cot_ref()).accuracy(),
+            _ if self == "cosh" => Float::with_val(2560, v.cosh_ref()).accuracy(),
+            _ if self == "sinh" => Float::with_val(2560, v.sinh_ref()).accuracy(),
+            _ if self == "tanh" => Float::with_val(2560, v.tanh_ref()).accuracy(),
+            _ if self == "csch" && v != &0.0 => Float::with_val(2560, v.csch_ref()).accuracy(),
+            _ if self == "sech" => Float::with_val(2560, v.sech_ref()).accuracy(),
+            _ if self == "coth" && v != &0.0 => Float::with_val(2560, v.coth_ref()).accuracy(),
+            _ if self == "acos" && v >= &-1.0 && v <= &1.0 => Float::with_val(2560, v.acos_ref()).accuracy(),
+            _ if self == "asin" && v >= &-1.0 && v <= &1.0 => Float::with_val(2560, v.asin_ref()).accuracy(),
+            _ if self == "atan" => Float::with_val(2560, v.atan_ref()).accuracy(),
+            _ if self == "acosh" && v >= &1.0 => Float::with_val(2560, v.acosh_ref()).accuracy(),
+            _ if self == "asinh" => Float::with_val(2560, v.asinh_ref()).accuracy(),
+            _ if self == "atanh" && v > &-1.0 && v < &1.0 => Float::with_val(2560, v.atanh_ref()).accuracy(),
+            _ if self == "cbrt" => Float::with_val(2560, v.cbrt_ref()).accuracy(),
+            _ if self == "sqrt" && v >= &0.0 => Float::with_val(2560, v.sqrt_ref()).accuracy(),
             _ if self == "fac" => {
                 let fac = Float::factorial(v.to_u32_saturating().unwrap());
                 Float::with_val(2560, fac).accuracy()
@@ -407,7 +407,7 @@ impl Calc {
                             }
 
                             if let Some(fun) = func.borrow_mut().remove(&bracket) {
-                                let value = fun.math(num.borrow_mut().pop().unwrap())?;
+                                let value = fun.math(&num.borrow_mut().pop().unwrap())?;
                                 num.borrow_mut().push(value);
                             }
 
