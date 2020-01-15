@@ -294,6 +294,13 @@ impl Calc {
         }
     }
 
+    fn extract(&self, n: usize, i: usize) -> Result<Float, String> {
+        match Float::parse(&self.expression[n..i]) {
+            Ok(valid) => Float::with_val(2560, valid).accuracy(),
+            Err(_) => Err("Invalid Number".to_string())
+        }
+    }
+
     pub fn run(&self) -> Result<Float, String> {
         let sign = &self.sign;
         let num = &self.numbers;
@@ -307,13 +314,6 @@ impl Calc {
         "cosh","sinh","tanh","sech","ln","csch","acos","asin","atan",
         "acosh","asinh","atanh","exp","log","logx","sqrt","cbrt","fac"];
         let pi = Float::with_val(128, Constant::Pi);
-
-        let extract = |n: usize, i: usize| -> Result<Float, String> {
-            match Float::parse(&expr[n..i]) {
-                Ok(valid) => Float::with_val(2560, valid).accuracy(),
-                Err(_) => Err("Invalid Number".to_string())
-            }
-        };
 
         for (index, &valid) in expr.as_bytes().iter().enumerate() {
             match valid {
@@ -343,7 +343,7 @@ impl Calc {
                     }
 
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                        num.borrow_mut().push(extract(locat, index)?);
+                        num.borrow_mut().push(self.extract(locat, index)?);
                         *sign.borrow_mut() = Sign::Data;
                     }
 
@@ -395,7 +395,7 @@ impl Calc {
                 b')' => {
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                         if mark == b'N' {
-                            num.borrow_mut().push(extract(locat, index)?);
+                            num.borrow_mut().push(self.extract(locat, index)?);
                             *sign.borrow_mut() = Sign::Data;
                         }
                     }
@@ -431,7 +431,7 @@ impl Calc {
                     }
 
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                        num.borrow_mut().push(extract(locat, index)?);
+                        num.borrow_mut().push(self.extract(locat, index)?);
                         *sign.borrow_mut() = Sign::Data;
                     }
 
