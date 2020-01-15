@@ -277,7 +277,7 @@ impl Other for String {
             _ if self == "fac" => {
                 let fac = Float::factorial(v.to_u32_saturating().unwrap());
                 Float::with_val(2560, fac).accuracy()
-            }
+            },
             _ => Err("Parameter Error".to_string())
         }
     }
@@ -349,7 +349,8 @@ impl Calc {
 
                     while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
                         if ope.borrow().last().unwrap().priority() >= ch.priority() {
-                            let value = ope.borrow_mut().pop().unwrap().computing(self)?;
+                            let bo = ope.borrow_mut().pop().unwrap();
+                            let value = bo.computing(self)?;
                             num.borrow_mut().push(value);
                         } else {
                             break;
@@ -402,7 +403,8 @@ impl Calc {
                     if let Sign::Data = sign.clone().into_inner() {
                         if bracket > 0 {
                             while ope.borrow().last().unwrap() != &b'(' {
-                                let value = ope.borrow_mut().pop().unwrap().computing(self)?;
+                                let bo = ope.borrow_mut().pop().unwrap();
+                                let value = bo.computing(self)?;
                                 num.borrow_mut().push(value);
                             }
 
@@ -434,7 +436,8 @@ impl Calc {
                     }
 
                     while ope.borrow().len() != 0 {
-                        let value = ope.borrow_mut().pop().unwrap().computing(self)?;
+                        let bo = ope.borrow_mut().pop().unwrap();
+                        let value = bo.computing(self)?;
                         num.borrow_mut().push(value);
                     }
                     let res = num.borrow_mut().pop().unwrap();
