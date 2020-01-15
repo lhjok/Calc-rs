@@ -5,18 +5,6 @@ use std::collections::HashMap;
 use std::process::exit;
 use lazy_static::lazy_static;
 
-#[macro_use]
-lazy_static! {
-    static ref MAX: Float = {
-        let mx = Float::parse("1e+768").unwrap();
-        Float::with_val(2560, mx)
-    }; 
-    static ref MIN: Float = {
-        let mn = Float::parse("-1e+768").unwrap();
-        Float::with_val(2560, mn)
-    };
-}
-
 #[derive(Clone)]
 enum Sign {
     Init,
@@ -30,6 +18,18 @@ pub struct Calc {
     operator: RefCell<Vec<u8>>,
     func: RefCell<HashMap<u32, String>>,
     expression: String,
+}
+
+#[macro_use]
+lazy_static! {
+    static ref MAX: Float = {
+        let mx = Float::parse("1e+768").unwrap();
+        Float::with_val(2560, mx)
+    }; 
+    static ref MIN: Float = {
+        let mn = Float::parse("-1e+768").unwrap();
+        Float::with_val(2560, mn)
+    };
 }
 
 trait Symbol {
