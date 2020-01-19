@@ -234,15 +234,11 @@ impl Other for String {
     fn clean_zero(&self) -> String {
         let mut find: bool = false;
         let (mut zero, mut dig) = (0, 0);
-        for v in self.as_bytes().iter() {
-            dig += 1;
-            zero += 1;
-            if v == &b'.'{
-                dig = 0;
-                find = true;
-            }
-            if v != &b'0' {
-                zero = 0;
+        for valid in self.as_bytes().iter() {
+            match valid {
+                b'0' => { dig += 1; zero += 1; },
+                b'.' => { dig = 0; find = true; zero = 0; },
+                _ => { dig += 1; zero = 0; },
             }
         }
         if find == true {
