@@ -23,12 +23,12 @@ pub struct Calc {
 #[macro_use]
 lazy_static! {
     static ref MAX: Float = {
-        let mx = Float::parse("1e+768").unwrap();
-        Float::with_val(2560, mx)
+        let max = Float::parse("1e+768").unwrap();
+        Float::with_val(2560, max)
     }; 
     static ref MIN: Float = {
-        let mn = Float::parse("-1e+768").unwrap();
-        Float::with_val(2560, mn)
+        let min = Float::parse("-1e+768").unwrap();
+        Float::with_val(2560, min)
     };
 }
 
@@ -106,15 +106,22 @@ impl Bignum for Float {
 
         if exp == 0 { temp = fix; }
         for (i, v) in temp.as_bytes().iter().enumerate() {
-            if v == &b'.'{
-                let a = temp[..i].to_string();
-                let b = temp[i+1..].to_string();
-                res = a + &b;
+            match v {
+                b'.' => {
+                    let a = temp[..i].to_string();
+                    let b = temp[i+1..].to_string();
+                    res = a + &b;
+                    zero = 0;
+                },
+                b'-' => {
+                    if exp < 0 {
+                        i_or_u = 1;
+                    } else { exp += 1; }
+                    zero = 0;
+                },
+                b'0' => zero += 1,
+                _ => zero = 0,
             }
-            zero += 1;
-            if v != &b'0' { zero = 0; }
-            if exp < 0 && v == &b'-' { i_or_u = 1; }
-            if exp >= 0 && v == &b'-' { exp += 1; }
         }
 
         if exp < 0 {
