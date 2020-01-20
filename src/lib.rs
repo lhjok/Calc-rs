@@ -76,11 +76,11 @@ impl Symbol for u8 {
 
 impl Bignum for Float {
     fn fmod(&self, n: &Float) -> Float {
-        let m = Float::with_val(2560, self / n);
-        let res = if self < &0.0 {
-            m.ceil()
-        } else { m.floor() };
-        self - res * n
+        let mut m = Float::with_val(2560, self / n);
+        if self < &0.0 {
+            m.ceil_mut();
+        } else { m.floor_mut(); }
+        Float::with_val(2560, self - &m * n)
     }
 
     fn accuracy(&self) -> Result<Float, String> {
@@ -93,8 +93,8 @@ impl Bignum for Float {
     fn to_fixed(&self) -> String {
         let mut exp: i32 = 0;
         let (mut zero, mut i_or_u) = (0, 0);
-        let (mut temp, mut res) = (String::new(), String::new());
         let fix: String = self.to_string_radix(10, None);
+        let (mut temp, mut res) = (fix.clone(), String::new());
 
         for (i, v) in fix.as_bytes().iter().enumerate() {
             if v == &b'e' {
@@ -104,19 +104,14 @@ impl Bignum for Float {
             }
         }
 
-        if exp == 0 { temp = fix; }
         for (i, v) in temp.as_bytes().iter().enumerate() {
             match v {
                 b'.' => {
-                    let a = temp[..i].to_string();
-                    let b = temp[i+1..].to_string();
-                    res = a + &b;
+                    res = temp[..i].to_string() + &temp[i+1..];
                     zero = 0;
                 },
                 b'-' => {
-                    if exp < 0 {
-                        i_or_u = 1;
-                    } else { exp += 1; }
+                    if exp < 0 { i_or_u = 1; }else{ exp += 1; }
                     zero = 0;
                 },
                 b'0' => zero += 1,
@@ -161,14 +156,17 @@ impl Bignum for Float {
                 } else if x < 3 {
                     return "Set Accuracy Greater Than 2".to_string();
                 }
+
+                let mut n: usize = 0;
                 let mut dig: usize = 0;
                 let mut point: bool = false;
                 let mut res = String::new();
+
                 for (i, v) in fix.as_bytes().iter().enumerate() {
-                    dig += 1;
-                    if v == &b'.'{
-                        dig = 0;
-                        point = true;
+                    match v {
+                        b'-' => n = 1,
+                        b'.' => { dig = 0; point = true; },
+                        _ => dig += 1,
                     }
                     if dig < x && i == fix.len()-1 {
                         return fix;
@@ -184,8 +182,7 @@ impl Bignum for Float {
                             res.push(from_digit(b+1, 10).unwrap());
                             return res;
                         } else if a > 4 && b == 9 && c < 9 {
-                            res.pop();
-                            res.pop();
+                            res.pop(); res.pop();
                             res.push(from_digit(c+1, 10).unwrap());
                             return res;
                         }
@@ -193,14 +190,9 @@ impl Bignum for Float {
                     }
                 }
 
-                let mut n = 0;
-                if let Some(_) = res.find('-') {
-                    n = 1;
-                }
-
                 let rev = res.chars().rev().collect::<String>();
                 for (i, v) in rev.as_bytes().iter().enumerate() {
-                    if v == &b'.' || v == &b'-' {
+                    if let b'.' | b'-' = v {
                         continue;
                     }
                     if i == rev.len()-1-n {
