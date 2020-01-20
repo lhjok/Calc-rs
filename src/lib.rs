@@ -107,12 +107,12 @@ impl Bignum for Float {
         for (i, v) in temp.as_bytes().iter().enumerate() {
             match v {
                 b'.' => {
-                    res = temp[..i].to_string() + &temp[i+1..];
-                    zero = 0;
+                    res = temp[..i].to_string();
+                    res += &temp[i+1..]; zero = 0;
                 },
                 b'-' => {
-                    if exp < 0 { i_or_u = 1; }else{ exp += 1; }
-                    zero = 0;
+                    if exp < 0 { i_or_u = 1 }
+                    else { exp += 1 }; zero = 0;
                 },
                 b'0' => zero += 1,
                 _ => zero = 0,
