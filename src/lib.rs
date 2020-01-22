@@ -92,8 +92,8 @@ impl Bignum for Float {
     fn to_fixed(&self) -> String {
         let mut exp: i32 = 0;
         let (mut zero, mut i_or_u) = (0, 0);
+        let (mut temp, mut res) = (String::new(), String::new());
         let fix: String = self.to_string_radix(10, None);
-        let (mut temp, mut res) = (fix.clone(), String::new());
 
         for (i, v) in fix.as_bytes().iter().enumerate() {
             if v == &b'e' {
@@ -103,6 +103,7 @@ impl Bignum for Float {
             }
         }
 
+        if exp == 0 { temp = fix };
         for (i, v) in temp.as_bytes().iter().enumerate() {
             match v {
                 b'.' => {
@@ -191,28 +192,31 @@ impl Bignum for Float {
 
                 let rev = res.chars().rev().collect::<String>();
                 for (i, v) in rev.as_bytes().iter().enumerate() {
-                    if let b'.' | b'-' = v {
+                    if v == &b'.' {
                         continue;
                     }
-                    if i == rev.len()-1-n {
-                        let a = res.remove(0+n).to_digit(10).unwrap();
-                        res.insert_str(0+n, &(a+1).to_string());
-                        return res.clean_zero();
-                    }
                     let a = rev[i..i+1].parse::<u32>().unwrap();
-                    let mut b: u32 = 0;
-                    let nonum = rev[i+1..i+2].as_bytes();
-                    if nonum != &[b'.'] && nonum != &[b'-'] {
-                        b = rev[i+1..i+2].parse::<u32>().unwrap();
-                    }
                     if a == 9 {
                         res.remove(res.len()-1-i);
-                        res.insert(res.len()-i, from_digit(0, 10).unwrap());
-                        if b + 1 <= 9 && nonum != &[b'.'] && nonum != &[b'-'] {
-                            res.remove(res.len()-2-i);
-                            res.insert(res.len()-1-i, from_digit(b+1, 10).unwrap());
+                        if i == rev.len()-1-n {
+                            res.insert_str(0+n, &(a+1).to_string());
                             return res.clean_zero();
                         }
+                        res.insert(res.len()-i, from_digit(0, 10).unwrap());
+                    } else if a < 9 {
+                        res.remove(res.len()-1-i);
+                        res.insert(res.len()-i, from_digit(a+1, 10).unwrap());
+                        return res.clean_zero();
+                    }
+                    let point = rev[i+1..i+2].as_bytes();
+                    if point == &[b'.'] {
+                        continue;
+                    }
+                    let b = rev[i+1..i+2].parse::<u32>().unwrap();
+                    if b < 9 {
+                        res.remove(res.len()-2-i);
+                        res.insert(res.len()-1-i, from_digit(b+1, 10).unwrap());
+                        return res.clean_zero();
                     }
                 }
                 exit(0)
