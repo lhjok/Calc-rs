@@ -153,8 +153,8 @@ impl Bignum for Float {
             Some(x) => {
                 if let None = fix.find('.') {
                     return fix;
-                } else if x < 3 {
-                    return "Set Accuracy Greater Than 2".to_string();
+                } else if x < 2 {
+                    return "Set Accuracy Greater Than 1".to_string();
                 }
 
                 let mut n: usize = 0;
@@ -173,17 +173,12 @@ impl Bignum for Float {
                     } else if point == true && dig == x && i <= fix.len()-1 {
                         let a = fix[i..i+1].parse::<u32>().unwrap();
                         let b = fix[i-1..i].parse::<u32>().unwrap();
-                        let c = fix[i-2..i-1].parse::<u32>().unwrap();
                         res = fix[..i].to_string();
                         if a < 5 {
                             return res.clean_zero();
-                        } else if a > 4 && b < 9 {
+                        } else if b < 9 {
                             res.pop();
                             res.push(from_digit(b+1, 10).unwrap());
-                            return res;
-                        } else if a > 4 && b == 9 && c < 9 {
-                            res.pop(); res.pop();
-                            res.push(from_digit(c+1, 10).unwrap());
                             return res;
                         }
                         break;
@@ -305,13 +300,12 @@ impl Calc {
         let ope = &self.operator;
         let expr = &self.expression;
         let func = &self.func;
-        let mut locat: usize = 0;
-        let mut bracket: u32 = 0;
-        let mut mark: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
         let math = ["abs","cos","sin","tan","csc","sec","cot","coth",
         "cosh","sinh","tanh","sech","ln","csch","acos","asin","atan",
         "acosh","asinh","atanh","exp","log","logx","sqrt","cbrt","fac"];
-        let pi = Float::with_val(128, Constant::Pi);
+        let mut mark: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
+        let mut locat: usize = 0;
+        let mut bracket: u32 = 0;
 
         for (index, &valid) in expr.as_bytes().iter().enumerate() {
             match valid {
@@ -347,8 +341,7 @@ impl Calc {
 
                     while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
                         if ope.borrow().last().unwrap().priority() >= ch.priority() {
-                            let bo = ope.borrow_mut().pop().unwrap();
-                            let value = bo.computing(self)?;
+                            let value = ope.borrow_mut().pop().unwrap().computing(self)?;
                             num.borrow_mut().push(value);
                         } else {
                             break;
@@ -401,8 +394,7 @@ impl Calc {
                     if let Sign::Data = sign.clone().into_inner() {
                         if bracket > 0 {
                             while ope.borrow().last().unwrap() != &b'(' {
-                                let bo = ope.borrow_mut().pop().unwrap();
-                                let value = bo.computing(self)?;
+                                let value = ope.borrow_mut().pop().unwrap().computing(self)?;
                                 num.borrow_mut().push(value);
                             }
 
@@ -434,20 +426,20 @@ impl Calc {
                     }
 
                     while ope.borrow().len() != 0 {
-                        let bo = ope.borrow_mut().pop().unwrap();
-                        let value = bo.computing(self)?;
+                        let value = ope.borrow_mut().pop().unwrap().computing(self)?;
                         num.borrow_mut().push(value);
                     }
-                    let res = num.borrow_mut().pop().unwrap();
-                    return Ok(res);
+                    return Ok(num.borrow_mut().pop().unwrap());
                 }
 
                 b'P' => {
                     if let Sign::Char | Sign::Init = sign.clone().into_inner() {
                         if mark != b'N' && mark != b'F' {
                             let value = if mark == b'-' {
-                                Float::with_val(128, 0.0 - &pi)
-                            } else { pi.clone() };
+                                0.0 - Float::with_val(128, &Constant::Pi)
+                            } else {
+                                Float::with_val(128, &Constant::Pi)
+                            };
                             num.borrow_mut().push(value);
                             *sign.borrow_mut() = Sign::Data;
                             locat = index + 1;
