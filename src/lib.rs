@@ -39,7 +39,7 @@ trait Symbol {
 
 trait Bignum {
     fn fmod(&self, n: &Float) -> Float;
-    fn accuracy(&self) -> Result<Float, String>;
+    fn accuracy(self) -> Result<Float, String>;
     fn to_fixed(&self) -> String;
     fn to_fixed_round(&self, n: Option<usize>) -> String;
 }
@@ -82,9 +82,9 @@ impl Bignum for Float {
         Float::with_val(2560, self - &m * n)
     }
 
-    fn accuracy(&self) -> Result<Float, String> {
-        if *MAX > *self && *MIN < *self {
-            return Ok(self.clone());
+    fn accuracy(self) -> Result<Float, String> {
+        if *MAX > self && *MIN < self {
+            return Ok(self);
         }
         Err("Beyond Accuracy".to_string())
     }
