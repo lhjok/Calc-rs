@@ -45,8 +45,8 @@ trait Bignum {
 }
 
 trait Other {
-    fn clean_zero(&self) -> String;
-    fn math(&self, v: &Float) -> Result<Float, String>;
+    fn clean_zero(self) -> String;
+    fn math(&self, v: Float) -> Result<Float, String>;
 }
 
 impl Symbol for u8 {
@@ -221,7 +221,7 @@ impl Bignum for Float {
 }
 
 impl Other for String {
-    fn clean_zero(&self) -> String {
+    fn clean_zero(self) -> String {
         let mut find: bool = false;
         let (mut zero, mut dig) = (0, 0);
         for valid in self.as_bytes().iter() {
@@ -237,38 +237,39 @@ impl Other for String {
             }
             return self[..self.len()-zero].to_string();
         }
-        self.clone()
+        self
     }
 
-    fn math(&self, v: &Float) -> Result<Float, String> {
+    fn math(&self, v: Float) -> Result<Float, String> {
         match self.as_str() {
-            "abs" => Float::with_val(2560, v.abs_ref()).accuracy(),
-            "ln" if v > &0.0 => Float::with_val(2560, v.ln_ref()).accuracy(),
-            "exp" => Float::with_val(2560, v.exp_ref()).accuracy(),
-            "log" if v > &0.0 => Float::with_val(2560, v.log2_ref()).accuracy(),
-            "logx" if v > &0.0 => Float::with_val(2560, v.log10_ref()).accuracy(),
-            "cos" => Float::with_val(2560, v.cos_ref()).accuracy(),
-            "sin" => Float::with_val(2560, v.sin_ref()).accuracy(),
-            "tan" => Float::with_val(2560, v.tan_ref()).accuracy(),
-            "csc" if v != &0.0 => Float::with_val(2560, v.csc_ref()).accuracy(),
-            "sec" => Float::with_val(2560, v.sec_ref()).accuracy(),
-            "cot" if v != &0.0 => Float::with_val(2560, v.cot_ref()).accuracy(),
-            "cosh" => Float::with_val(2560, v.cosh_ref()).accuracy(),
-            "sinh" => Float::with_val(2560, v.sinh_ref()).accuracy(),
-            "tanh" => Float::with_val(2560, v.tanh_ref()).accuracy(),
-            "csch" if v != &0.0 => Float::with_val(2560, v.csch_ref()).accuracy(),
-            "sech" => Float::with_val(2560, v.sech_ref()).accuracy(),
-            "coth" if v != &0.0 => Float::with_val(2560, v.coth_ref()).accuracy(),
-            "acos" if v >= &-1.0 && v <= &1.0 => Float::with_val(2560, v.acos_ref()).accuracy(),
-            "asin" if v >= &-1.0 && v <= &1.0 => Float::with_val(2560, v.asin_ref()).accuracy(),
-            "atan" => Float::with_val(2560, v.atan_ref()).accuracy(),
-            "acosh" if v >= &1.0 => Float::with_val(2560, v.acosh_ref()).accuracy(),
-            "asinh" => Float::with_val(2560, v.asinh_ref()).accuracy(),
-            "atanh" if v > &-1.0 && v < &1.0 => Float::with_val(2560, v.atanh_ref()).accuracy(),
-            "cbrt" => Float::with_val(2560, v.cbrt_ref()).accuracy(),
-            "sqrt" if v >= &0.0 => Float::with_val(2560, v.sqrt_ref()).accuracy(),
+            "abs" => v.abs().accuracy(),
+            "ln" if v > 0.0 => v.ln().accuracy(),
+            "exp" => v.exp().accuracy(),
+            "log" if v > 0.0 => v.log2().accuracy(),
+            "logx" if v > 0.0 => v.log10().accuracy(),
+            "cos" => v.cos().accuracy(),
+            "sin" => v.sin().accuracy(),
+            "tan" => v.tan().accuracy(),
+            "csc" if v != 0.0 => v.csc().accuracy(),
+            "sec" => v.sec().accuracy(),
+            "cot" if v != 0.0 => v.cot().accuracy(),
+            "cosh" => v.cosh().accuracy(),
+            "sinh" => v.sinh().accuracy(),
+            "tanh" => v.tanh().accuracy(),
+            "csch" if v != 0.0 => v.csch().accuracy(),
+            "sech" => v.sech().accuracy(),
+            "coth" if v != 0.0 => v.coth().accuracy(),
+            "acos" if v >= -1.0 && v <= 1.0 => v.acos().accuracy(),
+            "asin" if v >= -1.0 && v <= 1.0 => v.asin().accuracy(),
+            "atan" => v.atan().accuracy(),
+            "acosh" if v >= 1.0 => v.acosh().accuracy(),
+            "asinh" => v.asinh().accuracy(),
+            "atanh" if v > -1.0 && v < 1.0 => v.atanh().accuracy(),
+            "cbrt" => v.cbrt().accuracy(),
+            "sqrt" if v >= 0.0 => v.sqrt().accuracy(),
             "fac" => {
-                let fac = Float::factorial(v.to_u32_saturating().unwrap());
+                let to_u32 = v.to_u32_saturating().unwrap();
+                let fac = Float::factorial(to_u32);
                 Float::with_val(2560, fac).accuracy()
             },
             _ => Err("Parameter Error".to_string())
@@ -399,7 +400,7 @@ impl Calc {
                             }
 
                             if let Some(fun) = func.borrow_mut().remove(&bracket) {
-                                let value = fun.math(&num.borrow_mut().pop().unwrap())?;
+                                let value = fun.math(num.borrow_mut().pop().unwrap())?;
                                 num.borrow_mut().push(value);
                             }
 
