@@ -77,8 +77,9 @@ impl Symbol for u8 {
 impl Bignum for Float {
     fn fmod(&self, n: &Float) -> Float {
         let mut m = Float::with_val(2560, self / n);
-        if self < &0.0 { m.ceil_mut() }
-        else { m.floor_mut() };
+        if self < &0.0 {
+            m.ceil_mut()
+        } else { m.floor_mut() };
         Float::with_val(2560, self - &m * n)
     }
 
@@ -111,8 +112,9 @@ impl Bignum for Float {
                     res += &temp[i+1..]; zero = 0;
                 },
                 b'-' => {
-                    if exp < 0 { i_or_u = 1 }
-                    else { exp += 1 }; zero = 0;
+                    if exp < 0 {
+                        i_or_u = 1
+                    } else { exp += 1 }; zero = 0;
                 },
                 b'0' => zero += 1,
                 _ => zero = 0,
