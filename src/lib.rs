@@ -358,16 +358,10 @@ impl Calc {
 
                 ch @ b'(' => {
                     if mark == b'F' {
-                        let mut find: bool = false;
                         let valid = expr[locat..index].to_string();
-                        for value in math.iter() {
-                            if value == &valid {
-                                func.borrow_mut().insert(bracket+1, valid.clone());
-                                find = true;
-                                break;
-                            }
-                        }
-                        if find == false {
+                        if math.iter().any(|&value| value == valid) {
+                            func.borrow_mut().insert(bracket+1, valid);
+                        } else {
                             return Err("Function Undefined".to_string());
                         }
                     }
