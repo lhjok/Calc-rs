@@ -327,8 +327,7 @@ impl Calc {
                 }
 
                 ch @ b'+' | ch @ b'-' | ch @ b'*' | ch @ b'/' | ch @ b'%' | ch @ b'^' => {
-                    let nega: bool = mark == b'I' || mark == b'(' || mark == b'C';
-                    if nega == true && ch == b'-' {
+                    if ch == b'-' && mark == b'I' || mark == b'(' || mark == b'C' {
                         mark = b'-';
                         continue;
                     } else if mark != b'N' && mark != b')' && mark != b'P' {
