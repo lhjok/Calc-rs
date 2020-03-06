@@ -47,6 +47,7 @@ trait Bignum {
 trait Other {
     fn clean_zero(self) -> String;
     fn math(&self, v: Float) -> Result<Float, String>;
+    fn extract(&self, n: usize, i: usize) -> Result<Float, String>;
 }
 
 impl Symbol for u8 {
@@ -277,6 +278,13 @@ impl Other for String {
             _ => Err("Parameter Error".to_string())
         }
     }
+
+    fn extract(&self, n: usize, i: usize) -> Result<Float, String> {
+        match Float::parse(&self[n..i]) {
+            Ok(valid) => Float::with_val(2560, valid).accuracy(),
+            Err(_) => Err("Invalid Number".to_string())
+        }
+    }
 }
 
 impl Calc {
@@ -290,19 +298,11 @@ impl Calc {
         }
     }
 
-    fn extract(&self, n: usize, i: usize) -> Result<Float, String> {
-        match Float::parse(&self.expression[n..i]) {
-            Ok(valid) => Float::with_val(2560, valid).accuracy(),
-            Err(_) => Err("Invalid Number".to_string())
-        }
-    }
-
     pub fn run(&self) -> Result<Float, String> {
-        let sign = &self.sign;
         let num = &self.numbers;
         let ope = &self.operator;
-        let expr = &self.expression;
-        let func = &self.func;
+        let mut expr = self.expression.replace("π", "P");
+        expr = expr.replace(" ", "");
         let math = ["abs","cos","sin","tan","csc","sec","cot","coth",
         "cosh","sinh","tanh","sech","ln","csch","acos","asin","atan",
         "acosh","asinh","atanh","exp","log","logx","sqrt","cbrt","fac"];
@@ -336,9 +336,9 @@ impl Calc {
                         return Err("Expression Error".to_string());
                     }
 
-                    if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                        num.borrow_mut().push(self.extract(locat, index)?);
-                        *sign.borrow_mut() = Sign::Data;
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        num.borrow_mut().push(expr.extract(locat, index)?);
+                        *self.sign.borrow_mut() = Sign::Data;
                     }
 
                     while ope.borrow().len() != 0 && ope.borrow().last().unwrap() != &b'(' {
@@ -351,7 +351,7 @@ impl Calc {
                     }
 
                     ope.borrow_mut().push(ch);
-                    *sign.borrow_mut() = Sign::Char;
+                    *self.sign.borrow_mut() = Sign::Char;
                     locat = index + 1;
                     mark = b'C';
                     continue;
@@ -361,13 +361,13 @@ impl Calc {
                     if mark == b'F' {
                         let valid = expr[locat..index].to_string();
                         if math.iter().any(|&value| value == valid) {
-                            func.borrow_mut().insert(bracket+1, valid);
+                            self.func.borrow_mut().insert(bracket+1, valid);
                         } else {
                             return Err("Function Undefined".to_string());
                         }
                     }
 
-                    if let Sign::Char | Sign::Init = sign.clone().into_inner() {
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
                         if mark != b'N' && mark != b'-' {
                             ope.borrow_mut().push(ch);
                             locat = index + 1;
@@ -380,21 +380,21 @@ impl Calc {
                 }
 
                 b')' => {
-                    if let Sign::Char | Sign::Init = sign.clone().into_inner() {
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
                         if mark == b'N' {
-                            num.borrow_mut().push(self.extract(locat, index)?);
-                            *sign.borrow_mut() = Sign::Data;
+                            num.borrow_mut().push(expr.extract(locat, index)?);
+                            *self.sign.borrow_mut() = Sign::Data;
                         }
                     }
 
-                    if let Sign::Data = sign.clone().into_inner() {
+                    if let Sign::Data = self.sign.clone().into_inner() {
                         if bracket > 0 {
                             while ope.borrow().last().unwrap() != &b'(' {
                                 let value = ope.borrow_mut().pop().unwrap().computing(self)?;
                                 num.borrow_mut().push(value);
                             }
 
-                            if let Some(fun) = func.borrow_mut().remove(&bracket) {
+                            if let Some(fun) = self.func.borrow_mut().remove(&bracket) {
                                 let value = fun.math(num.borrow_mut().pop().unwrap())?;
                                 num.borrow_mut().push(value);
                             }
@@ -416,9 +416,9 @@ impl Calc {
                         return Err("Expression Error".to_string());
                     }
 
-                    if let Sign::Char | Sign::Init = sign.clone().into_inner() {
-                        num.borrow_mut().push(self.extract(locat, index)?);
-                        *sign.borrow_mut() = Sign::Data;
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
+                        num.borrow_mut().push(expr.extract(locat, index)?);
+                        *self.sign.borrow_mut() = Sign::Data;
                     }
 
                     while ope.borrow().len() != 0 {
@@ -429,7 +429,7 @@ impl Calc {
                 }
 
                 b'P' => {
-                    if let Sign::Char | Sign::Init = sign.clone().into_inner() {
+                    if let Sign::Char | Sign::Init = self.sign.clone().into_inner() {
                         if mark != b'N' && mark != b'F' {
                             let value = if mark == b'-' {
                                 0.0 - Float::with_val(128, &Constant::Pi)
@@ -437,7 +437,7 @@ impl Calc {
                                 Float::with_val(128, &Constant::Pi)
                             };
                             num.borrow_mut().push(value);
-                            *sign.borrow_mut() = Sign::Data;
+                            *self.sign.borrow_mut() = Sign::Data;
                             locat = index + 1;
                             mark = b'P';
                             continue;
