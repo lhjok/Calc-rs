@@ -329,8 +329,7 @@ impl Calc {
                 }
 
                 ch @ b'+' | ch @ b'-' | ch @ b'*' | ch @ b'/' | ch @ b'%' | ch @ b'^' => {
-                    let lt = mark == b'I' || mark == b'(' || mark == b'C';
-                    if ch == b'-' && lt == true {
+                    if ch == b'-' && (mark == b'I' || mark == b'(' || mark == b'C') {
                         mark = b'-';
                         continue;
                     } else if mark != b'N' && mark != b')' && mark != b'P' {
