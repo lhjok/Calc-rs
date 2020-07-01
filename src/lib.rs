@@ -294,18 +294,17 @@ impl Calc {
             numbers: RefCell::new(Vec::new()),
             operator: RefCell::new(Vec::new()),
             func: RefCell::new(HashMap::new()),
-            expression: expr+"=",
+            expression: expr + "=",
         }
     }
 
     pub fn run(&self) -> Result<Float, String> {
         let num = &self.numbers;
         let ope = &self.operator;
-        let mut expr = self.expression.replace("π", "P");
-        expr = expr.replace(" ", "");
         let math = ["abs","cos","sin","tan","csc","sec","cot","coth",
         "cosh","sinh","tanh","sech","ln","csch","acos","asin","atan",
         "acosh","asinh","atanh","exp","log","logx","sqrt","cbrt","fac"];
+        let expr = self.expression.replace("π", "P").replace(" ", "");
         let mut mark: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
         let mut locat: usize = 0;
         let mut bracket: u32 = 0;
@@ -329,7 +328,7 @@ impl Calc {
                 }
 
                 ch @ b'+' | ch @ b'-' | ch @ b'*' | ch @ b'/' | ch @ b'%' | ch @ b'^' => {
-                    if ch == b'-' && (mark == b'I' || mark == b'(' || mark == b'C') {
+                    if ch == b'-' && ( mark == b'I' || mark == b'(' || mark == b'C' ) {
                         mark = b'-';
                         continue;
                     } else if mark != b'N' && mark != b')' && mark != b'P' {
