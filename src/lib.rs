@@ -40,11 +40,11 @@ trait Symbol {
 trait Bignum {
     fn fmod(&self, n: &Float) -> Float;
     fn accuracy(self) -> Result<Float, String>;
-    fn to_fixed(&self) -> String;
-    fn to_fixed_round(&self, n: Option<usize>) -> String;
+    fn to_string_round(&self, n: Option<usize>) -> String;
 }
 
 trait Other {
+    fn to_fixed(&self) -> String;
     fn clean_zero(self) -> String;
     fn math(&self, v: Float) -> Result<Float, String>;
     fn extract(&self, n: usize, i: usize) -> Result<Float, String>;
@@ -91,66 +91,11 @@ impl Bignum for Float {
         Err("Beyond Accuracy".to_string())
     }
 
-    fn to_fixed(&self) -> String {
-        let mut exp: i32 = 0;
-        let (mut zero, mut i_or_u) = (0, 0);
-        let (mut temp, mut res) = (String::new(), String::new());
-        let fix: String = self.to_string_radix(10, None);
+    fn to_string_round(&self, digits: Option<usize>) -> String {
+        let fix = if self < &1.0 && self > &-1.0 {
+            self.to_string_radix(10, None).to_fixed()
+        } else { self.to_string_radix(10, None).clean_zero() };
 
-        for (i, v) in fix.as_bytes().iter().enumerate() {
-            if v == &b'e' {
-                temp = fix[..i].to_string();
-                exp = fix[i+1..].parse::<i32>().unwrap();
-                break;
-            }
-        }
-
-        if exp == 0 { temp = fix };
-        for (i, v) in temp.as_bytes().iter().enumerate() {
-            match v {
-                b'.' => {
-                    res = temp[..i].to_string();
-                    res += &temp[i+1..]; zero = 0;
-                },
-                b'-' => {
-                    if exp < 0 {
-                        i_or_u = 1
-                    } else { exp += 1 }; zero = 0;
-                },
-                b'0' => zero += 1,
-                _ => zero = 0,
-            }
-        }
-
-        if exp < 0 {
-            exp = exp.abs();
-            for _ in 0..exp {
-                res.insert(i_or_u, '0');
-                exp -= 1;
-            }
-            if i_or_u != 0 {
-                exp += 1;
-            }
-        }
-
-        if exp == 0 && res.len()-zero == 1 {
-            return res[..res.len()-zero].to_string();
-        } else if exp == 0 && res.len()-zero > 1 {
-            res = res[..res.len()-zero].to_string();
-            res.insert(1, '.');
-            return res;
-        }
-
-        let u_exp = exp as usize + 1;
-        res.insert(u_exp, '.');
-        if u_exp >= res.len()-1-zero {
-            return res[..u_exp].to_string();
-        }
-        res[..res.len()-zero].to_string()
-    }
-
-    fn to_fixed_round(&self, digits: Option<usize>) -> String {
-        let fix = self.to_fixed();
         match digits {
             None => fix,
             Some(x) => {
@@ -224,6 +169,63 @@ impl Bignum for Float {
 }
 
 impl Other for String {
+    fn to_fixed(&self) -> String {
+        let mut exp: i32 = 0;
+        let (mut zero, mut i_or_u) = (0, 0);
+        let (mut temp, mut res) = (String::new(), String::new());
+
+        for (i, v) in self.as_bytes().iter().enumerate() {
+            if v == &b'e' {
+                temp = self[..i].to_string();
+                exp = self[i+1..].parse::<i32>().unwrap();
+                break;
+            }
+        }
+
+        if exp == 0 { temp = self.clone() };
+        for (i, v) in temp.as_bytes().iter().enumerate() {
+            match v {
+                b'.' => {
+                    res = temp[..i].to_string();
+                    res += &temp[i+1..]; zero = 0;
+                },
+                b'-' => {
+                    if exp < 0 {
+                        i_or_u = 1
+                    } else { exp += 1 }; zero = 0;
+                },
+                b'0' => zero += 1,
+                _ => zero = 0,
+            }
+        }
+
+        if exp < 0 {
+            exp = exp.abs();
+            for _ in 0..exp {
+                res.insert(i_or_u, '0');
+                exp -= 1;
+            }
+            if i_or_u != 0 {
+                exp += 1;
+            }
+        }
+
+        if exp == 0 && res.len()-zero == 1 {
+            return res[..res.len()-zero].to_string();
+        } else if exp == 0 && res.len()-zero > 1 {
+            res = res[..res.len()-zero].to_string();
+            res.insert(1, '.');
+            return res;
+        }
+
+        let u_exp = exp as usize + 1;
+        res.insert(u_exp, '.');
+        if u_exp >= res.len()-1-zero {
+            return res[..u_exp].to_string();
+        }
+        res[..res.len()-zero].to_string()
+    }
+
     fn clean_zero(self) -> String {
         let mut find: bool = false;
         let (mut zero, mut dig) = (0, 0);
@@ -304,7 +306,8 @@ impl Calc {
         let math = ["abs","cos","sin","tan","csc","sec","cot","coth",
         "cosh","sinh","tanh","sech","ln","csch","acos","asin","atan",
         "acosh","asinh","atanh","exp","log","logx","sqrt","cbrt","fac"];
-        let expr = self.expression.replace("π", "P").replace(" ", "");
+        let expr = self.expression.replace("π", "P")
+            .replace(" ", "").replace("÷", "/").replace("×", "*");
         let mut mark: u8 = b'I'; // I = Init, C = Char, N = Number, F = Func, P = Pi
         let mut locat: usize = 0;
         let mut bracket: u32 = 0;
@@ -453,7 +456,7 @@ impl Calc {
 
     pub fn run_round(&self, digits: Option<usize>) -> Result<String, String> {
         match self.run() {
-            Ok(value) => Ok(value.to_fixed_round(digits)),
+            Ok(value) => Ok(value.to_string_round(digits)),
             Err(err) => Err(err)
         }
     }
