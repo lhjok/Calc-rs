@@ -92,7 +92,7 @@ impl Bignum for Float {
     }
 
     fn to_string_round(&self, digits: Option<usize>) -> String {
-        let fix = if self < &1.0 && self > &-1.0 {
+        let fix = if self < &1.0 && self > &-1.0 && self != &0.0 {
             self.to_string_radix(10, None).to_fixed()
         } else { self.to_string_radix(10, None).clean_zero() };
 
